@@ -3966,6 +3966,14 @@ export class ColumnsService implements IColumnsService {
                         },
                         ncMeta,
                       );
+                      await this.metaDependencyEventHandler.handleEvent(
+                        refContext,
+                        {
+                          eventType: MetaEventType.COLUMN_DELETED,
+                          oldEntity: c,
+                        },
+                        ncMeta,
+                      );
                       if (!c.system) {
                         this.appHooksService.emit(AppEvents.COLUMN_DELETE, {
                           table: refTable,
@@ -4402,6 +4410,15 @@ export class ColumnsService implements IColumnsService {
             ncMeta,
           );
 
+          await this.metaDependencyEventHandler.handleEvent(
+            refContext,
+            {
+              eventType: MetaEventType.COLUMN_DELETED,
+              oldEntity: colInRefTable,
+            },
+            ncMeta,
+          );
+
           if (colInRefTable && !colInRefTable.system) {
             this.appHooksService.emit(AppEvents.COLUMN_DELETE, {
               table: refTable,
@@ -4657,6 +4674,15 @@ export class ColumnsService implements IColumnsService {
             {
               id: c.id,
               ...generateColumnDeleteHandler(columnWebhookManager),
+            },
+            ncMeta,
+          );
+
+          await this.metaDependencyEventHandler.handleEvent(
+            refContext,
+            {
+              eventType: MetaEventType.COLUMN_DELETED,
+              oldEntity: colInRefTable,
             },
             ncMeta,
           );

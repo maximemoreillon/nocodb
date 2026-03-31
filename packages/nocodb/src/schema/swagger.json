@@ -26228,6 +26228,10 @@
             "type": "number",
             "description": "The order among the list",
             "example": 1
+          },
+          "error": {
+            "description": "Error Message",
+            "type": "string"
           }
         },
         "x-stoplight": {
@@ -27634,6 +27638,10 @@
               "sumDistinct",
               "avgDistinct"
             ]
+          },
+          "error": {
+            "description": "Error Message",
+            "type": "string"
           }
         },
         "x-stoplight": {

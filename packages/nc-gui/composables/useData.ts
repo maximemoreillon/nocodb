@@ -28,6 +28,8 @@ export function useData(args: {
 
   const { $api } = useNuxtApp()
 
+  const { restoreFromTrash } = useRecordTrash()
+
   const { isPaginationLoading } = storeToRefs(useViewsStore())
 
   const reloadAggregate = inject(ReloadAggregateHookInj)
@@ -603,13 +605,9 @@ export function useData(args: {
             undo: hasSoftDelete
               ? {
                   fn: async function undo(this: UndoRedoAction, id: string) {
-                    await $api.internal.postOperation(
-                      (meta.value as TableType)?.fk_workspace_id ?? 'nc__',
-                      (meta.value as TableType)?.base_id,
-                      { operation: 'recordTrashRestore' as any } as any,
-                      { tableId: meta.value?.id, rowIds: [id] },
-                    )
-                    await callbacks?.loadData?.()
+                    await restoreFromTrash(meta.value as TableType, [id], {
+                      onSuccess: () => callbacks?.loadData?.(),
+                    })
                   },
                   args: [id],
                 }
@@ -744,15 +742,9 @@ export function useData(args: {
               .map((row) => extractPkFromRow(row.row.row, meta.value?.columns as ColumnType[]))
               .filter(Boolean)
 
-            if (rowIds.length) {
-              await $api.internal.postOperation(
-                (meta.value as TableType)?.fk_workspace_id ?? 'nc__',
-                (meta.value as TableType)?.base_id!,
-                { operation: 'recordTrashRestore' as any } as any,
-                { tableId: meta.value?.id, rowIds },
-              )
-            }
-            await callbacks?.loadData?.()
+            await restoreFromTrash(meta.value as TableType, rowIds, {
+              onSuccess: () => callbacks?.loadData?.(),
+            })
           } else {
             const rowsToInsert = removedRowsData
               .map((row) => {
@@ -898,15 +890,9 @@ export function useData(args: {
               .map((row) => extractPkFromRow(row.row.row, meta.value?.columns as ColumnType[]))
               .filter(Boolean)
 
-            if (rowIds.length) {
-              await $api.internal.postOperation(
-                (meta.value as TableType)?.fk_workspace_id ?? 'nc__',
-                (meta.value as TableType)?.base_id!,
-                { operation: 'recordTrashRestore' as any } as any,
-                { tableId: meta.value?.id, rowIds },
-              )
-            }
-            await callbacks?.loadData?.()
+            await restoreFromTrash(meta.value as TableType, rowIds, {
+              onSuccess: () => callbacks?.loadData?.(),
+            })
           } else {
             const rowsToInsert = removedRowsData
               .map((row) => {

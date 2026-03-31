@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import {
   AuditOperationSubTypes,
+  isDeletedCol,
   isLinksOrLTAR,
   isLinkV2,
   isMMOrMMLike,
@@ -298,10 +299,22 @@ export class RelationManager {
       vParentCol: Column;
       filterColName: string;
       filterSubquery: Knex.QueryBuilder;
+      /** Table + path for the "other side" of the junction — used to skip soft-deleted rows */
+      otherSideTable?: Model;
+      otherSideColName?: string;
+      otherSideTn?: string | Knex.Raw;
     },
   ): Promise<Array<{ childFk: any; parentFk: any }>> {
-    const { vTn, vChildCol, vParentCol, filterColName, filterSubquery } =
-      params;
+    const {
+      vTn,
+      vChildCol,
+      vParentCol,
+      filterColName,
+      filterSubquery,
+      otherSideTable,
+      otherSideColName,
+      otherSideTn,
+    } = params;
 
     // 1. SELECT existing junction rows (just FK columns)
     const existingRows = await trx(vTn)
@@ -312,8 +325,43 @@ export class RelationManager {
       return [];
     }
 
-    // 2. Batch DELETE all matching junction rows
-    await trx(vTn).where(filterColName, filterSubquery).delete();
+    // 2. DELETE — skip rows where the other side is soft-deleted so that the
+    //    junction entry is preserved for restore conflict detection.
+    const deleteQb = trx(vTn).where(filterColName, filterSubquery);
+    const softDeleteCol = otherSideTable?.columns?.find((c) => isDeletedCol(c));
+    if (softDeleteCol && otherSideColName && otherSideTn) {
+      deleteQb.whereNotExists(
+        trx(otherSideTn).select(1).where(softDeleteCol.column_name, true).where(
+          otherSideTable.primaryKey.column_name,
+          // Bare column reference — SQL resolves this to the outer (junction) table
+          trx.ref(otherSideColName),
+        ),
+      );
+    }
+    await deleteQb.delete();
+
+    // Return only the rows that were actually deleted (not preserved for soft-deleted other side)
+    if (softDeleteCol && otherSideColName) {
+      const deletedRows = await trx(vTn)
+        .select(vChildCol.column_name, vParentCol.column_name)
+        .where(filterColName, filterSubquery);
+      const deletedSet = new Set(
+        deletedRows.map(
+          (r) => `${r[vChildCol.column_name]}:${r[vParentCol.column_name]}`,
+        ),
+      );
+      return existingRows
+        .filter(
+          (row) =>
+            !deletedSet.has(
+              `${row[vChildCol.column_name]}:${row[vParentCol.column_name]}`,
+            ),
+        )
+        .map((row) => ({
+          childFk: row[vChildCol.column_name],
+          parentFk: row[vParentCol.column_name],
+        }));
+    }
 
     return existingRows.map((row) => ({
       childFk: row[vChildCol.column_name],
@@ -429,6 +477,9 @@ export class RelationManager {
           vParentCol,
           filterColName: vChildCol.column_name,
           filterSubquery: childFkSubquery,
+          otherSideTable: parentTable,
+          otherSideColName: vParentCol.column_name,
+          otherSideTn: parentTn,
         });
 
         for (const pair of moRemovedPairs) {
@@ -457,6 +508,9 @@ export class RelationManager {
           vParentCol,
           filterColName: vParentCol.column_name,
           filterSubquery: parentFkSubquery,
+          otherSideTable: childTable,
+          otherSideColName: vChildCol.column_name,
+          otherSideTn: childTn,
         });
 
         for (const pair of omRemovedPairs) {
@@ -1324,28 +1378,20 @@ export class RelationManager {
   }
 
   async getAuditUpdateObj(req: any) {
-    const {
-      childTable,
-      parentTable,
-      relationColumn,
-      baseModel,
-    } = this.relationContext;
+    const { childTable, parentTable, relationColumn, baseModel } =
+      this.relationContext;
 
     // Find the paired link column on the related table
-    const pairedCol = await extractCorrespondingLinkColumn(
-      baseModel.context,
-      {
-        ltarColumn: relationColumn,
-        referencedTableColumns:
-          relationColumn.fk_model_id === parentTable.id
-            ? childTable.columns
-            : parentTable.columns,
-      },
-    );
+    const pairedCol = await extractCorrespondingLinkColumn(baseModel.context, {
+      ltarColumn: relationColumn,
+      referencedTableColumns:
+        relationColumn.fk_model_id === parentTable.id
+          ? childTable.columns
+          : parentTable.columns,
+    });
 
     // Determine which link column belongs to which table
-    const isRelColOnParent =
-      relationColumn.fk_model_id === parentTable.id;
+    const isRelColOnParent = relationColumn.fk_model_id === parentTable.id;
     const parentLinkCol = isRelColOnParent
       ? relationColumn
       : pairedCol || relationColumn;

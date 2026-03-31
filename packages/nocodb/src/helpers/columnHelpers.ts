@@ -686,7 +686,7 @@ export const getMMColumnNames = (parent: Model, child: Model) => {
   };
 };
 
-export const TableSystemColumns = (isMetaColSupport = false) => [
+export const TableSystemColumns = (isMetaColSupport = false, isMeta = true) => [
   {
     column_name: 'id',
     title: 'Id',
@@ -729,13 +729,17 @@ export const TableSystemColumns = (isMetaColSupport = false) => [
     allowNonSystem: false,
     system: true,
   },
-  {
-    column_name: '__nc_deleted',
-    title: '__nc_deleted',
-    uidt: UITypes.Deleted,
-    allowNonSystem: false,
-    system: true,
-  },
+  ...(isMeta
+    ? [
+        {
+          column_name: '__nc_deleted',
+          title: '__nc_deleted',
+          uidt: UITypes.Deleted,
+          allowNonSystem: false,
+          system: true,
+        },
+      ]
+    : []),
   ...(isMetaColSupport
     ? [
         {

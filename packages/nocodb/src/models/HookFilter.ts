@@ -15,6 +15,7 @@ import {
 import NocoCache from '~/cache/NocoCache';
 import { extractProps } from '~/helpers/extractProps';
 import { NcError } from '~/helpers/ncError';
+import { getModelContext, setModelContext } from '~/helpers/modelContext';
 
 const logger = new Logger('Filter');
 
@@ -41,15 +42,22 @@ export default class Filter {
     Object.assign(this, data);
   }
 
-  public async getModel(
-    context: NcContext,
-    ncMeta = Noco.ncMeta,
-  ): Promise<Model> {
+  get context(): NcContext {
+    const ctx = getModelContext(this);
+    if (ctx) return ctx;
+    if (this.fk_workspace_id && this.base_id) {
+      return {
+        workspace_id: this.fk_workspace_id,
+        base_id: this.base_id,
+      } as NcContext;
+    }
+    throw new Error('HookFilter instance accessed without context');
+  }
+
+  public async getModel(ncMeta = Noco.ncMeta): Promise<Model> {
+    const context = this.context;
     return this.fk_view_id
-      ? (await View.get(context, this.fk_view_id, ncMeta)).getModel(
-          context,
-          ncMeta,
-        )
+      ? (await View.get(context, this.fk_view_id, ncMeta)).getModel(ncMeta)
       : Model.getByIdOrName(
           context,
           {
@@ -169,7 +177,7 @@ export default class Filter {
         await Promise.all(p);
       });
     }
-    return new Filter(value);
+    return setModelContext(new Filter(value), context);
   }
 
   static async update(
@@ -209,7 +217,7 @@ export default class Filter {
 
     const deleteRecursively = async (filter: Filter) => {
       if (!filter) return;
-      for (const f of (await filter?.getChildren(context, ncMeta)) || [])
+      for (const f of (await filter?.getChildren(ncMeta)) || [])
         await deleteRecursively(f);
       await ncMeta.metaDelete(
         context.workspace_id,
@@ -226,10 +234,10 @@ export default class Filter {
     await deleteRecursively(filter);
   }
 
-  public getColumn(context: NcContext, ncMeta = Noco.ncMeta): Promise<Column> {
+  public getColumn(ncMeta = Noco.ncMeta): Promise<Column> {
     if (!this.fk_column_id) return null;
     return Column.get(
-      context,
+      this.context,
       {
         colId: this.fk_column_id,
       },
@@ -255,12 +263,10 @@ export default class Filter {
   //   return filterObj && new Filter(filterObj);
   // }
   //
-  public async getChildren(
-    context: NcContext,
-    ncMeta = Noco.ncMeta,
-  ): Promise<Filter[]> {
+  public async getChildren(ncMeta = Noco.ncMeta): Promise<Filter[]> {
     if (this.children) return this.children;
     if (!this.is_group) return null;
+    const context = this.context;
     const cachedList = await NocoCache.getList(
       context,
       CacheScope.FILTER_EXP,
@@ -287,7 +293,10 @@ export default class Filter {
         childFilters,
       );
     }
-    return childFilters && childFilters.map((f) => new Filter(f));
+    return (
+      childFilters &&
+      childFilters.map((f) => setModelContext(new Filter(f), context))
+    );
   }
 
   // public static async getFilter({
@@ -446,7 +455,9 @@ export default class Filter {
       );
       await NocoCache.set(context, `${CacheScope.FILTER_EXP}:${id}`, filterObj);
     }
-    return filterObj && new Filter(filterObj);
+    const instance = filterObj && new Filter(filterObj);
+    if (instance) setModelContext(instance, context);
+    return instance;
   }
   //
   static async rootFilterList(
@@ -478,7 +489,7 @@ export default class Filter {
         filterObjs,
       );
     }
-    return filterObjs?.map((f) => new Filter(f));
+    return filterObjs?.map((f) => setModelContext(new Filter(f), context));
   }
   //
   // static async parentFilterList(

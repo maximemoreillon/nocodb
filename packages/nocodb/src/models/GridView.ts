@@ -7,6 +7,7 @@ import NocoCache from '~/cache/NocoCache';
 import { extractProps } from '~/helpers/extractProps';
 import { CacheGetType, CacheScope, MetaTable } from '~/utils/globals';
 import { prepareForDb, prepareForResponse } from '~/utils/modelUtils';
+import { getModelContext, setModelContext } from '~/helpers/modelContext';
 
 export default class GridView implements GridType {
   fk_view_id: string;
@@ -21,8 +22,23 @@ export default class GridView implements GridType {
     Object.assign(this, data);
   }
 
-  async getColumns(context: NcContext): Promise<GridViewColumn[]> {
-    return (this.columns = await GridViewColumn.list(context, this.fk_view_id));
+  get context(): NcContext {
+    const ctx = getModelContext(this);
+    if (ctx) return ctx;
+    if (this.fk_workspace_id && this.base_id) {
+      return {
+        workspace_id: this.fk_workspace_id,
+        base_id: this.base_id,
+      } as NcContext;
+    }
+    throw new Error('GridView instance accessed without context');
+  }
+
+  async getColumns(): Promise<GridViewColumn[]> {
+    return (this.columns = await GridViewColumn.list(
+      this.context,
+      this.fk_view_id,
+    ));
   }
 
   public static async get(
@@ -49,7 +65,9 @@ export default class GridView implements GridType {
       await NocoCache.set(context, `${CacheScope.GRID_VIEW}:${viewId}`, view);
     }
 
-    return view && new GridView(view);
+    const instance = view && new GridView(view);
+    if (instance) setModelContext(instance, context);
+    return instance;
   }
 
   static async insert(

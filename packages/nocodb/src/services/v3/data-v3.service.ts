@@ -68,7 +68,7 @@ export class DataV3Service {
       modelId,
       user,
     });
-    const columns = await model.getColumns(context);
+    const columns = await model.getColumns();
     const primaryKey = model.primaryKey;
     const primaryKeys = model.primaryKeys;
 
@@ -87,12 +87,8 @@ export class DataV3Service {
     _context: NcContext,
     column: Column,
   ): Promise<RelatedModelInfo | null> {
-    const context = { ..._context, base_id: column.base_id };
     const colOptions = column.colOptions as LinkToAnotherRecordColumn;
-
-    // getRelatedTable internally calls getRelContext({...context, base_id: this.base_id})
-    // which correctly resolves the related base for cross-base links
-    const relatedModel = await colOptions.getRelatedTable(context);
+    const relatedModel = await colOptions.getRelatedTable();
 
     if (!relatedModel) {
       this.logger.warn(
@@ -101,11 +97,7 @@ export class DataV3Service {
       return null;
     }
 
-    // Use the refContext computed by getRelContext (now correctly cached
-    // from the getRelatedTable call above) for loading columns
-    const { refContext } = colOptions.getRelContext(context);
-
-    await relatedModel.getColumns(refContext);
+    await relatedModel.getColumns();
     const relatedPrimaryKey = relatedModel.primaryKey;
     const primaryKeys = relatedModel.primaryKeys;
 
@@ -963,9 +955,8 @@ export class DataV3Service {
     const { primaryKey: relatedPrimaryKey, primaryKeys: relatedPrimaryKeys } =
       relatedModelInfo;
 
-    const colOptions = (await column.getColOptions(
-      context,
-    )) as LinkToAnotherRecordColumn;
+    const colOptions =
+      (await column.getColOptions()) as LinkToAnotherRecordColumn;
 
     const isSingleRelation =
       colOptions.type === RelationTypes.BELONGS_TO ||
@@ -981,8 +972,8 @@ export class DataV3Service {
       const requestedFields = this.getRequestedFields(param.query);
 
       // Get related model columns for LTAR transformation
-      const relatedModel = await colOptions.getRelatedTable(context);
-      const relatedColumns = await relatedModel.getColumns(context);
+      const relatedModel = await colOptions.getRelatedTable();
+      const relatedColumns = await relatedModel.getColumns();
 
       const linksAsLtar = param.query?.[QUERY_STRING_LINKS_AS_LTAR] === 'true';
 
@@ -1050,8 +1041,8 @@ export class DataV3Service {
     const requestedFields = this.getRequestedFields(param.query);
 
     // Get related model columns for LTAR transformation
-    const relatedModel = await colOptions.getRelatedTable(context);
-    const relatedColumns = await relatedModel.getColumns(context);
+    const relatedModel = await colOptions.getRelatedTable();
+    const relatedColumns = await relatedModel.getColumns();
 
     // Extract nested page limit
     const nestedLimit =
@@ -1229,7 +1220,7 @@ export class DataV3Service {
 
     const column = await this.dataTableService.getColumn(context, param);
 
-    await baseModel.model.getColumns(baseModel.context);
+    await baseModel.model.getColumns();
 
     await LTARColsUpdater({
       baseModel,

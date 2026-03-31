@@ -18,10 +18,7 @@ export type IColumn = ColumnType & {
   base_id: string;
   fk_workspace_id?: string;
   meta?: any;
-  getColOptions?: <T extends IColumnOptions>(
-    context: NcContext,
-    ncMeta?: any
-  ) => Promise<T>;
+  getColOptions?: <T extends IColumnOptions>(ncMeta?: any) => Promise<T>;
 };
 
 export interface IModel {
@@ -30,7 +27,7 @@ export interface IModel {
   id: string;
   title: string;
   columns?: IColumn[];
-  getColumns?: (context: NcContext) => Promise<IColumn[]>;
+  getColumns?: (ncMeta?: any) => Promise<IColumn[]>;
 }
 
 export interface IGetModel {

@@ -41,12 +41,9 @@ export const extractCorrespondingLinkColumn = async (
     return null;
   }
 
-  const colOptions = await ltarColumn.getColOptions({
-    ...context,
-    base_id: ltarColumn.base_id,
-  });
+  const colOptions = await ltarColumn.getColOptions();
 
-  const { refContext } = colOptions.getRelContext(context);
+  const { refContext } = colOptions.getRelContext();
 
   // Get the table that contains the LTAR column
   const sourceTableId = ltarColumn.fk_model_id;
@@ -58,13 +55,13 @@ export const extractCorrespondingLinkColumn = async (
   } else if (param.referencedTable) {
     columnsInReferencedTable =
       param.referencedTable.columns ||
-      (await param.referencedTable.getColumns(refContext));
+      (await param.referencedTable.getColumns());
   } else {
     // Extract referenced table columns from ref table ID if not provided
     const refTableId = colOptions.fk_related_model_id;
     const refTable = await Model.get(context, refTableId);
     columnsInReferencedTable =
-      refTable.columns || (await refTable.getColumns(refContext));
+      refTable.columns || (await refTable.getColumns());
   }
 
   // Find the corresponding link column based on the relation type
@@ -74,7 +71,7 @@ export const extractCorrespondingLinkColumn = async (
     const passContext =
       column.base_id === refContext.base_id ? refContext : context;
 
-    const refColOptions = await column.getColOptions(passContext);
+    const refColOptions = await column.getColOptions();
 
     // Check if this column links back to the source table
     if (refColOptions.fk_related_model_id !== sourceTableId) continue;
@@ -199,7 +196,7 @@ export const addOrRemoveLinks = (baseModel: IBaseModelSqlV2) => {
     colId: string;
     rowId: string;
   }) => {
-    await baseModel.model.getColumns(baseModel.context);
+    await baseModel.model.getColumns();
     const column = baseModel.model.columnsById[colId];
 
     if (!column || !isLinksOrLTAR(column))
@@ -219,19 +216,17 @@ export const addOrRemoveLinks = (baseModel: IBaseModelSqlV2) => {
 
     if (!_childIds.length) return;
 
-    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>(
-      baseModel.context,
-    );
+    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>();
 
     const { childContext, parentContext, mmContext } =
-      await colOptions.getParentChildContext(baseModel.context);
+      await colOptions.getParentChildContext();
 
-    const childColumn = await colOptions.getChildColumn(childContext);
-    const parentColumn = await colOptions.getParentColumn(parentContext);
-    const parentTable = await parentColumn.getModel(parentContext);
-    const childTable = await childColumn.getModel(childContext);
-    await childTable.getColumns(childContext);
-    await parentTable.getColumns(parentContext);
+    const childColumn = await colOptions.getChildColumn();
+    const parentColumn = await colOptions.getParentColumn();
+    const parentTable = await parentColumn.getModel();
+    const childTable = await childColumn.getModel();
+    await childTable.getColumns();
+    await parentTable.getColumns();
 
     const childBaseModel = await Model.getBaseModelSQL(childContext, {
       model: childTable,
@@ -325,9 +320,9 @@ export const addOrRemoveLinks = (baseModel: IBaseModelSqlV2) => {
 
           validateRefIds(childIds, parentTable);
 
-          const vChildCol = await colOptions.getMMChildColumn(mmContext);
-          const vParentCol = await colOptions.getMMParentColumn(mmContext);
-          const vTable = await colOptions.getMMModel(mmContext);
+          const vChildCol = await colOptions.getMMChildColumn();
+          const vParentCol = await colOptions.getMMParentColumn();
+          const vTable = await colOptions.getMMModel();
 
           const assocBaseModel = await Model.getBaseModelSQL(mmContext, {
             model: vTable,
@@ -827,7 +822,7 @@ export const addOrRemoveLinks = (baseModel: IBaseModelSqlV2) => {
     colId: string;
     rowId: string;
   }) => {
-    await baseModel.model.getColumns(baseModel.context);
+    await baseModel.model.getColumns();
     const column = baseModel.model.columnsById[colId];
 
     if (!column || !isLinksOrLTAR(column))
@@ -847,19 +842,17 @@ export const addOrRemoveLinks = (baseModel: IBaseModelSqlV2) => {
 
     if (!childIds.length) return;
 
-    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>(
-      baseModel.context,
-    );
+    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>();
 
     const { parentContext, childContext, mmContext } =
-      await colOptions.getParentChildContext(baseModel.context);
+      await colOptions.getParentChildContext();
 
-    const childColumn = await colOptions.getChildColumn(childContext);
-    const parentColumn = await colOptions.getParentColumn(parentContext);
-    const parentTable = await parentColumn.getModel(parentContext);
-    const childTable = await childColumn.getModel(childContext);
-    await childTable.getColumns(childContext);
-    await parentTable.getColumns(parentContext);
+    const childColumn = await colOptions.getChildColumn();
+    const parentColumn = await colOptions.getParentColumn();
+    const parentTable = await parentColumn.getModel();
+    const childTable = await childColumn.getModel();
+    await childTable.getColumns();
+    await parentTable.getColumns();
 
     const childBaseModel = await Model.getBaseModelSQL(childContext, {
       model: childTable,
@@ -918,9 +911,9 @@ export const addOrRemoveLinks = (baseModel: IBaseModelSqlV2) => {
       case RelationTypes.MANY_TO_MANY:
         {
           validateRefIds(childIds, parentTable);
-          const vChildCol = await colOptions.getMMChildColumn(mmContext);
-          const vParentCol = await colOptions.getMMParentColumn(mmContext);
-          const vTable = await colOptions.getMMModel(mmContext);
+          const vChildCol = await colOptions.getMMChildColumn();
+          const vParentCol = await colOptions.getMMParentColumn();
+          const vTable = await colOptions.getMMModel();
 
           const assocBaseModel = await Model.getBaseModelSQL(mmContext, {
             model: vTable,

@@ -54,20 +54,17 @@ export const selectObject = (baseModel: IBaseModelSqlV2, logger: Logger) => {
     let fields: string[];
 
     if (fieldsSet?.size) {
-      viewOrTableColumns =
-        _columns || (await baseModel.model.getColumns(baseModel.context));
+      viewOrTableColumns = _columns || (await baseModel.model.getColumns());
     } else {
       view = await View.get(baseModel.context, viewId);
       const viewColumns =
         viewId && (await View.getColumns(baseModel.context, viewId));
       fields = Array.isArray(_fields) ? _fields : _fields?.split(',');
 
-      // const columns = _columns ?? (await baseModel.model.getColumns(baseModel.context));
+      // const columns = _columns ?? (await baseModel.model.getColumns());
       // for (const column of columns) {
       viewOrTableColumns =
-        viewColumns ||
-        _columns ||
-        (await baseModel.model.getColumns(baseModel.context));
+        viewColumns || _columns || (await baseModel.model.getColumns());
     }
     for (const viewOrTableColumn of viewOrTableColumns) {
       const column =
@@ -113,7 +110,7 @@ export const selectObject = (baseModel: IBaseModelSqlV2, logger: Logger) => {
             const columnName = await getColumnName(
               baseModel.context,
               column,
-              _columns || (await baseModel.model.getColumns(baseModel.context)),
+              _columns || (await baseModel.model.getColumns()),
             );
             if (baseModel.isMySQL) {
               // MySQL stores timestamp in UTC but display in timezone
@@ -156,9 +153,7 @@ export const selectObject = (baseModel: IBaseModelSqlV2, logger: Logger) => {
         case UITypes.Lookup:
           break;
         case UITypes.QrCode: {
-          const qrCodeColumn = await column.getColOptions<QrCodeColumn>(
-            baseModel.context,
-          );
+          const qrCodeColumn = await column.getColOptions<QrCodeColumn>();
 
           if (!qrCodeColumn.fk_qr_value_column_id) {
             qb.select(
@@ -202,9 +197,7 @@ export const selectObject = (baseModel: IBaseModelSqlV2, logger: Logger) => {
           break;
         }
         case UITypes.Barcode: {
-          const barcodeColumn = await column.getColOptions<BarcodeColumn>(
-            baseModel.context,
-          );
+          const barcodeColumn = await column.getColOptions<BarcodeColumn>();
 
           if (!barcodeColumn.fk_barcode_value_column_id) {
             qb.select(
@@ -417,9 +410,7 @@ export const selectObject = (baseModel: IBaseModelSqlV2, logger: Logger) => {
                 knex: baseModel.dbDriver,
                 // column,
                 alias,
-                columnOptions: (await column.getColOptions(
-                  baseModel.context,
-                )) as RollupColumn,
+                columnOptions: (await column.getColOptions()) as RollupColumn,
               })
             ).builder.as(getAs(column)),
           );
@@ -429,7 +420,7 @@ export const selectObject = (baseModel: IBaseModelSqlV2, logger: Logger) => {
           const columnName = await getColumnName(
             baseModel.context,
             column,
-            _columns || (await baseModel.model.getColumns(baseModel.context)),
+            _columns || (await baseModel.model.getColumns()),
           );
 
           res[sanitize(getAs(column) || columnName)] = sanitize(

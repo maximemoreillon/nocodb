@@ -132,7 +132,7 @@ export class DuplicateProcessor {
 
       const user = (req as any).user;
 
-      const filteredModels = (await dataSource.getModels(context)).filter(
+      const filteredModels = (await dataSource.getModels()).filter(
         (m) => m.source_id === dataSource.id && !m.mm && m.type === 'table',
       );
 
@@ -401,7 +401,7 @@ export class DuplicateProcessor {
 
     const user = (req as any).user;
 
-    const models = (await source.getModels(context)).filter(
+    const models = (await source.getModels()).filter(
       (m) => !m.mm && m.type === 'table',
     );
 
@@ -415,7 +415,7 @@ export class DuplicateProcessor {
       await new ColumnWebhookManagerBuilder(targetContext).withModelId(modelId)
     ).forCreate();
     try {
-      await sourceModel.getColumns(context);
+      await sourceModel.getColumns();
 
       const relatedModelIds = sourceModel.columns
         .filter((col) => isLinksOrLTAR(col))
@@ -589,13 +589,13 @@ export class DuplicateProcessor {
 
     const source = await Source.get(context, sourceColumn.source_id);
 
-    const models = (await source.getModels(context)).filter(
+    const models = (await source.getModels()).filter(
       (m) => !m.mm && m.type === 'table',
     );
 
     const sourceModel = models.find((m) => m.id === sourceColumn.fk_model_id);
 
-    const columns = await sourceModel.getColumns(context);
+    const columns = await sourceModel.getColumns();
 
     const title = generateUniqueName(
       `${sourceColumn.title} copy`,
@@ -834,7 +834,7 @@ export class DuplicateProcessor {
 
     // Build identity map for all models and columns with hierarchical notation
     for (const sourceModel of sourceModels) {
-      await sourceModel.getColumns(sourceContext);
+      await sourceModel.getColumns();
 
       // Map model ID with hierarchical notation
       const sourceModelHierarchicalId = `${sourceProject.id}::${sourceSource.id}::${sourceModel.id}`;

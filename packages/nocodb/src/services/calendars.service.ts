@@ -122,7 +122,7 @@ export class CalendarsService {
       owner,
     });
 
-    await view.getView(context);
+    await view.getView();
 
     NocoSocket.broadcastEvent(
       context,
@@ -205,7 +205,7 @@ export class CalendarsService {
       owner,
     });
 
-    await view.getView(context);
+    await view.getView();
 
     NocoSocket.broadcastEvent(
       context,

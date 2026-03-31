@@ -71,7 +71,7 @@ export class KanbansService {
       (param.kanban as KanbanView).fk_cover_image_col_id === undefined &&
       !(param.kanban as { copy_from_id: string }).copy_from_id
     ) {
-      const attachmentField = (await model.getColumns(context, ncMeta)).find(
+      const attachmentField = (await model.getColumns(ncMeta)).find(
         (column) => column.uidt === UITypes.Attachment,
       );
       if (attachmentField) {
@@ -155,7 +155,7 @@ export class KanbansService {
       context,
     });
 
-    await view.getView<ViewTypes.KANBAN>(context);
+    await view.getView<ViewTypes.KANBAN>();
 
     NocoSocket.broadcastEvent(
       context,
@@ -248,7 +248,7 @@ export class KanbansService {
       context,
     });
 
-    await view.getView<ViewTypes.KANBAN>(context);
+    await view.getView<ViewTypes.KANBAN>();
 
     NocoSocket.broadcastEvent(
       context,
@@ -283,7 +283,7 @@ export class KanbansService {
     }
 
     const model = await Model.get(context, view.fk_model_id, ncMeta);
-    const column = (await model.getColumns(context, ncMeta)).find(
+    const column = (await model.getColumns(ncMeta)).find(
       (col) => col.id === kanbanView.fk_grp_col_id,
     );
 
@@ -302,7 +302,7 @@ export class KanbansService {
     });
 
     // Update kanban stack meta
-    const colOptions = await column.getColOptions(context);
+    const colOptions = await column.getColOptions();
     if (colOptions?.options) {
       const stackMetaObj = parseProp(kanbanView.meta) || {};
 
@@ -391,14 +391,13 @@ export class KanbansService {
       ).forUpdate();
 
     const model = await Model.get(context, modelView.fk_model_id, ncMeta);
-    const column = (await model.getColumns(context, ncMeta)).find(
+    const column = (await model.getColumns(ncMeta)).find(
       (col) => col.id === kanbanView.fk_grp_col_id,
     );
     if (!column) {
       NcError.get(context).fieldNotFound(kanbanView.fk_grp_col_id);
     }
-    const options = (await column.getColOptions(context))
-      .options as SelectOption[];
+    const options = (await column.getColOptions()).options as SelectOption[];
     const metaOptions: any[] = parseProp(kanbanView.meta)?.[column.id] ?? [];
     if (metaOptions.length === 0) {
       metaOptions.push({

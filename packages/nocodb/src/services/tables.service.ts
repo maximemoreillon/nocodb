@@ -315,10 +315,10 @@ export class TablesService {
       );
     }
 
-    await table.getColumns(context);
+    await table.getColumns();
 
     if (table.mm) {
-      const columns = await table.getColumns(context);
+      const columns = await table.getColumns();
 
       // get table names of the relation which uses the current table as junction table
       const tables = await Promise.all(
@@ -388,8 +388,8 @@ export class TablesService {
       const referredTables = await Promise.all(
         relationColumns.map(async (c) =>
           c
-            .getColOptions<LinkToAnotherRecordColumn>(context)
-            .then((opt) => opt.getRelatedTable(context))
+            .getColOptions<LinkToAnotherRecordColumn>()
+            .then((opt) => opt.getRelatedTable())
             .then((t) => t?.title),
         ),
       );
@@ -451,7 +451,7 @@ export class TablesService {
         });
       }
 
-      result = await table.delete(context, ncMeta);
+      result = await table.delete(ncMeta);
       await ncMeta.commit();
     } catch (e) {
       await ncMeta.rollback();
@@ -515,7 +515,7 @@ export class TablesService {
     }
 
     if (isServiceUser(param.user, ServiceUserType.WORKFLOW_USER)) {
-      await table.getViews(context);
+      await table.getViews();
     } else {
       // todo: optimise
       const viewList = <View[]>(
@@ -563,7 +563,7 @@ export class TablesService {
     const result = await models.reduce(async (_obj, model) => {
       const obj = await _obj;
 
-      const views = await model.getViews(context);
+      const views = await model.getViews();
       for (const view of views) {
         obj[view.id] = {
           ptn: model.table_name,

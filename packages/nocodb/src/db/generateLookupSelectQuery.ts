@@ -31,14 +31,11 @@ export async function getDisplayValueOfRefTable(
   context: NcContext,
   relationCol: Column<LinkToAnotherRecordColumn | LinksColumn>,
 ) {
-  // Use the column's own base_id for getColOptions since the relation metadata
-  // is stored in the column's base, not the related table's base (cross-base links)
   const colOpt = await relationCol.getColOptions<
     LinkToAnotherRecordColumn | LinksColumn
-  >({ ...context, base_id: relationCol.base_id });
-  const model = await colOpt.getRelatedTable(context);
-  const modelContext = { ...context, base_id: model.base_id };
-  const cols = await model.getColumns(modelContext);
+  >();
+  const model = await colOpt.getRelatedTable();
+  const cols = await model.getColumns();
   return cols.find((col) => col.pv) || cols[0];
 }
 
@@ -77,7 +74,7 @@ export default async function generateLookupSelectQuery({
     const applyCte = (_qb: Knex.QueryBuilder) => {};
 
     if (column.uidt === UITypes.Lookup) {
-      lookupColOpt = await column.getColOptions<LookupColumn>(context);
+      lookupColOpt = await column.getColOptions<LookupColumn>();
     } else if (
       column.uidt !== UITypes.LinkToAnotherRecord &&
       column.uidt !== UITypes.Links
@@ -85,14 +82,14 @@ export default async function generateLookupSelectQuery({
       NcError.get(context).badRequest('Invalid field type');
     }
 
-    await column.getColOptions<LookupColumn>(context);
+    await column.getColOptions<LookupColumn>();
     let refContext: NcContext;
     {
       const relationCol = lookupColOpt
-        ? await lookupColOpt.getRelationColumn(context)
+        ? await lookupColOpt.getRelationColumn()
         : column;
       const relation =
-        await relationCol.getColOptions<LinkToAnotherRecordColumn>(context);
+        await relationCol.getColOptions<LinkToAnotherRecordColumn>();
 
       const isMMLike = isMMOrMMLike(relationCol);
 
@@ -101,7 +98,7 @@ export default async function generateLookupSelectQuery({
         childContext,
         refContext: _refContext,
         mmContext,
-      } = await relation.getParentChildContext(context, relationCol);
+      } = await relation.getParentChildContext(relationCol);
       refContext = _refContext;
 
       let relationType = relation.type;
@@ -113,12 +110,12 @@ export default async function generateLookupSelectQuery({
       }
 
       if (relationType === RelationTypes.BELONGS_TO && !isMMLike) {
-        const childColumn = await relation.getChildColumn(context);
-        const parentColumn = await relation.getParentColumn(context);
-        const childModel = await childColumn.getModel(childContext);
-        await childModel.getColumns(childContext);
-        const parentModel = await parentColumn.getModel(parentContext);
-        await parentModel.getColumns(parentContext);
+        const childColumn = await relation.getChildColumn();
+        const parentColumn = await relation.getParentColumn();
+        const childModel = await childColumn.getModel();
+        await childModel.getColumns();
+        const parentModel = await parentColumn.getModel();
+        await parentModel.getColumns();
 
         const childBaseModel = await Model.getBaseModelSQL(childContext, {
           model: childModel,
@@ -145,12 +142,12 @@ export default async function generateLookupSelectQuery({
         );
       } else if (relationType === RelationTypes.HAS_MANY && !isMMLike) {
         isBtLookup = false;
-        const childColumn = await relation.getChildColumn(context);
-        const parentColumn = await relation.getParentColumn(context);
-        const childModel = await childColumn.getModel(childContext);
-        await childModel.getColumns(childContext);
-        const parentModel = await parentColumn.getModel(parentContext);
-        await parentModel.getColumns(parentContext);
+        const childColumn = await relation.getChildColumn();
+        const parentColumn = await relation.getParentColumn();
+        const childModel = await childColumn.getModel();
+        await childModel.getColumns();
+        const parentModel = await parentColumn.getModel();
+        await parentModel.getColumns();
 
         const childBaseModel = await Model.getBaseModelSQL(childContext, {
           model: childModel,
@@ -180,12 +177,12 @@ export default async function generateLookupSelectQuery({
         if (!isSingleTargetV2) {
           isBtLookup = false;
         }
-        const childColumn = await relation.getChildColumn(context);
-        const parentColumn = await relation.getParentColumn(context);
-        const childModel = await childColumn.getModel(childContext);
-        await childModel.getColumns(childContext);
-        const parentModel = await parentColumn.getModel(parentContext);
-        await parentModel.getColumns(parentContext);
+        const childColumn = await relation.getChildColumn();
+        const parentColumn = await relation.getParentColumn();
+        const childModel = await childColumn.getModel();
+        await childModel.getColumns();
+        const parentModel = await parentColumn.getModel();
+        await parentModel.getColumns();
 
         const childBaseModel = await Model.getBaseModelSQL(childContext, {
           model: childModel,
@@ -206,9 +203,9 @@ export default async function generateLookupSelectQuery({
 
         const mmTableAlias = getAlias();
 
-        const mmModel = await relation.getMMModel(context);
-        const mmChildCol = await relation.getMMChildColumn(context);
-        const mmParentCol = await relation.getMMParentColumn(context);
+        const mmModel = await relation.getMMModel();
+        const mmChildCol = await relation.getMMChildColumn();
+        const mmParentCol = await relation.getMMParentColumn();
 
         const associatedBaseModel = await Model.getBaseModelSQL(mmContext, {
           model: mmModel,
@@ -238,18 +235,14 @@ export default async function generateLookupSelectQuery({
       }
     }
     let lookupColumn = lookupColOpt
-      ? await lookupColOpt.getLookupColumn(refContext)
+      ? await lookupColOpt.getLookupColumn()
       : await getDisplayValueOfRefTable(refContext, column);
 
     // if lookup column is qr code or barcode extract the referencing column
     if ([UITypes.QrCode, UITypes.Barcode].includes(lookupColumn.uidt)) {
-      // For cross-base lookups, lookupColumn might belong to a different base than context
-      const lookupColContext = lookupColumn.base_id
-        ? { ...context, base_id: lookupColumn.base_id }
-        : context;
       lookupColumn = await lookupColumn
-        .getColOptions<BarcodeColumn | QrCodeColumn>(lookupColContext)
-        .then((barcode) => barcode.getValueColumn(refContext));
+        .getColOptions<BarcodeColumn | QrCodeColumn>()
+        .then((barcode) => barcode.getValueColumn());
     }
     {
       let prevAlias = alias;
@@ -264,16 +257,14 @@ export default async function generateLookupSelectQuery({
         let nestedLookupColOpt: LookupColumn;
 
         if (lookupColumn.uidt === UITypes.Lookup) {
-          nestedLookupColOpt = await lookupColumn.getColOptions<LookupColumn>(
-            context,
-          );
-          relationCol = await nestedLookupColOpt.getRelationColumn(context);
+          nestedLookupColOpt = await lookupColumn.getColOptions<LookupColumn>();
+          relationCol = await nestedLookupColOpt.getRelationColumn();
         } else {
           relationCol = lookupColumn;
         }
 
         const relation =
-          await relationCol.getColOptions<LinkToAnotherRecordColumn>(context);
+          await relationCol.getColOptions<LinkToAnotherRecordColumn>();
 
         let relationType = isMMOrMMLike(relationCol)
           ? RelationTypes.MANY_TO_MANY
@@ -289,17 +280,17 @@ export default async function generateLookupSelectQuery({
           childContext,
           refContext: nestedRefContext,
           mmContext,
-        } = await relation.getParentChildContext(context, relationCol);
+        } = await relation.getParentChildContext(relationCol);
 
         // if any of the relation in nested lookupColOpt is
         // not belongs to then throw error as we don't support
         if (relationType === RelationTypes.BELONGS_TO) {
-          const childColumn = await relation.getChildColumn(context);
-          const parentColumn = await relation.getParentColumn(context);
-          const childModel = await childColumn.getModel(childContext);
-          await childModel.getColumns(childContext);
-          const parentModel = await parentColumn.getModel(parentContext);
-          await parentModel.getColumns(parentContext);
+          const childColumn = await relation.getChildColumn();
+          const parentColumn = await relation.getParentColumn();
+          const childModel = await childColumn.getModel();
+          await childModel.getColumns();
+          const parentModel = await parentColumn.getModel();
+          await parentModel.getColumns();
           const parentBaseModel = await Model.getBaseModelSQL(parentContext, {
             model: parentModel,
             dbDriver: knex,
@@ -315,12 +306,12 @@ export default async function generateLookupSelectQuery({
           );
         } else if (relationType === RelationTypes.HAS_MANY) {
           isBtLookup = false;
-          const childColumn = await relation.getChildColumn(context);
-          const parentColumn = await relation.getParentColumn(context);
-          const childModel = await childColumn.getModel(childContext);
-          await childModel.getColumns(childContext);
-          const parentModel = await parentColumn.getModel(parentContext);
-          await parentModel.getColumns(parentContext);
+          const childColumn = await relation.getChildColumn();
+          const parentColumn = await relation.getParentColumn();
+          const childModel = await childColumn.getModel();
+          await childModel.getColumns();
+          const parentModel = await parentColumn.getModel();
+          await parentModel.getColumns();
           const childBaseModel = await Model.getBaseModelSQL(childContext, {
             model: childModel,
             dbDriver: knex,
@@ -339,12 +330,12 @@ export default async function generateLookupSelectQuery({
           if (!nestedIsSingleTargetV2) {
             isBtLookup = false;
           }
-          const childColumn = await relation.getChildColumn(context);
-          const parentColumn = await relation.getParentColumn(context);
-          const childModel = await childColumn.getModel(childContext);
-          await childModel.getColumns(childContext);
-          const parentModel = await parentColumn.getModel(parentContext);
-          await parentModel.getColumns(parentContext);
+          const childColumn = await relation.getChildColumn();
+          const parentColumn = await relation.getParentColumn();
+          const childModel = await childColumn.getModel();
+          await childModel.getColumns();
+          const parentModel = await parentColumn.getModel();
+          await parentModel.getColumns();
 
           const childBaseModel = await Model.getBaseModelSQL(childContext, {
             model: childModel,
@@ -358,9 +349,9 @@ export default async function generateLookupSelectQuery({
 
           const mmTableAlias = getAlias();
 
-          const mmModel = await relation.getMMModel(context);
-          const mmChildCol = await relation.getMMChildColumn(context);
-          const mmParentCol = await relation.getMMParentColumn(context);
+          const mmModel = await relation.getMMModel();
+          const mmChildCol = await relation.getMMChildColumn();
+          const mmParentCol = await relation.getMMParentColumn();
 
           const associatedBaseModel = await Model.getBaseModelSQL(mmContext, {
             model: mmModel,
@@ -399,9 +390,7 @@ export default async function generateLookupSelectQuery({
         }
 
         if (lookupColumn.uidt === UITypes.Lookup)
-          lookupColumn = await nestedLookupColOpt.getLookupColumn(
-            nestedRefContext,
-          );
+          lookupColumn = await nestedLookupColOpt.getLookupColumn();
         else
           lookupColumn = await getDisplayValueOfRefTable(
             nestedRefContext,
@@ -413,7 +402,7 @@ export default async function generateLookupSelectQuery({
 
       {
         // get basemodel and model of lookup column
-        const model = await lookupColumn.getModel(context);
+        const model = await lookupColumn.getModel();
         const baseModelSqlv2 = await Model.getBaseModelSQL(context, {
           model,
           dbDriver: knex,
@@ -427,9 +416,8 @@ export default async function generateLookupSelectQuery({
                 await genRollupSelectv2({
                   baseModelSqlv2,
                   knex,
-                  columnOptions: (await lookupColumn.getColOptions(
-                    context,
-                  )) as RollupColumn,
+                  columnOptions:
+                    (await lookupColumn.getColOptions()) as RollupColumn,
                   alias: prevAlias,
                 })
               ).builder;
@@ -444,11 +432,11 @@ export default async function generateLookupSelectQuery({
                 await formulaQueryBuilderv2({
                   baseModel: baseModelSqlv2,
                   tree: (
-                    await lookupColumn.getColOptions<FormulaColumn>(context)
+                    await lookupColumn.getColOptions<FormulaColumn>()
                   ).formula,
                   model,
                   column: lookupColumn,
-                  aliasToColumn: await model.getAliasColMapping(context),
+                  aliasToColumn: await model.getAliasColMapping(),
                   tableAlias: prevAlias,
                 })
               ).builder;

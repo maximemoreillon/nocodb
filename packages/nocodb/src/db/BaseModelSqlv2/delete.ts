@@ -49,13 +49,10 @@ export class BaseModelDelete {
       skipPks?: string;
     };
   }) {
-    const columns = await this.baseModel.model.getColumns(
-      this.baseModel.context,
-    );
+    const columns = await this.baseModel.model.getColumns();
     const { where } = this.baseModel._getListArgs(args);
     const qb = this.baseModel.dbDriver(this.baseModel.tnPath);
     const aliasColObjMap = await this.baseModel.model.getAliasColObjMap(
-      this.baseModel.context,
       columns,
     );
 
@@ -117,23 +114,22 @@ export class BaseModelDelete {
       if (!isMeta || this.baseModel.model.primaryKeys.length > 1) break;
       if (!isLinksOrLTAR(column)) continue;
 
-      const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>(
-        this.baseModel.context,
-      );
+      const colOptions =
+        await column.getColOptions<LinkToAnotherRecordColumn>();
 
       const { refContext, mmContext, parentContext, childContext } =
-        await colOptions.getParentChildContext(this.baseModel.context);
+        await colOptions.getParentChildContext();
 
       if (colOptions.type === 'bt') {
         continue;
       }
 
-      const childColumn = await colOptions.getChildColumn(childContext);
-      const parentColumn = await colOptions.getParentColumn(parentContext);
-      const parentTable = await parentColumn.getModel(parentContext);
-      const childTable = await childColumn.getModel(childContext);
-      await childTable.getColumns(childContext);
-      await parentTable.getColumns(parentContext);
+      const childColumn = await colOptions.getChildColumn();
+      const parentColumn = await colOptions.getParentColumn();
+      const parentTable = await parentColumn.getModel();
+      const childTable = await childColumn.getModel();
+      await childTable.getColumns();
+      await parentTable.getColumns();
 
       const childBaseModel = await Model.getBaseModelSQL(childContext, {
         model: childTable,
@@ -146,8 +142,8 @@ export class BaseModelDelete {
       switch (relationType) {
         case 'mm':
           {
-            const vChildCol = await colOptions.getMMChildColumn(mmContext);
-            const vTable = await colOptions.getMMModel(mmContext);
+            const vChildCol = await colOptions.getMMChildColumn();
+            const vTable = await colOptions.getMMModel();
             const assocBaseModel = await Model.getBaseModelSQL(mmContext, {
               model: vTable,
               dbDriver: this.baseModel.dbDriver,
@@ -162,7 +158,7 @@ export class BaseModelDelete {
         case 'hm':
           {
             // skip if it's an mm table column
-            const relatedTable = await colOptions.getRelatedTable(refContext);
+            const relatedTable = await colOptions.getRelatedTable();
             if (relatedTable.mm) {
               break;
             }

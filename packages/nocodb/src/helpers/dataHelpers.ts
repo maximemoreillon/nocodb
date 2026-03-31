@@ -114,13 +114,13 @@ export async function serializeCellValue(
     }
     case UITypes.Lookup:
       {
-        const colOptions = await column.getColOptions<LookupColumn>(context);
+        const colOptions = await column.getColOptions<LookupColumn>();
         const relationColOptions = await colOptions
-          .getRelationColumn(context)
-          .then((col) => col.getColOptions<LinkToAnotherRecordColumn>(context));
-        const { refContext } = relationColOptions.getRelContext(context);
+          .getRelationColumn()
+          .then((col) => col.getColOptions<LinkToAnotherRecordColumn>());
+        const { refContext } = relationColOptions.getRelContext();
 
-        const lookupColumn = await colOptions.getLookupColumn(refContext);
+        const lookupColumn = await colOptions.getLookupColumn();
         return (
           await Promise.all(
             [...(Array.isArray(value) ? value : [value])].map(async (v) =>
@@ -137,10 +137,9 @@ export async function serializeCellValue(
     case UITypes.LinkToAnotherRecord:
       {
         const colOptions =
-          await column.getColOptions<LinkToAnotherRecordColumn>(context);
-        const { refContext } = await colOptions.getRelContext(context);
-        const relatedModel = await colOptions.getRelatedTable(refContext);
-        await relatedModel.getColumns(refContext);
+          await column.getColOptions<LinkToAnotherRecordColumn>();
+        const relatedModel = await colOptions.getRelatedTable();
+        await relatedModel.getColumns();
         return [...(Array.isArray(value) ? value : [value])]
           .map((v) => {
             return v[relatedModel.displayValue?.title];
@@ -185,7 +184,7 @@ export async function getColumnByIdOrName(
   columnNameOrId: string,
   model: Model,
 ) {
-  const column = (await model.getColumns(context)).find(
+  const column = (await model.getColumns()).find(
     (c) =>
       c.title === columnNameOrId ||
       c.id === columnNameOrId ||

@@ -1187,7 +1187,7 @@ export class DatasService {
     columnNameOrId: string,
     model: Model,
   ) {
-    const column = (await model.getColumns(context)).find(
+    const column = (await model.getColumns()).find(
       (c) =>
         c.title === columnNameOrId ||
         c.id === columnNameOrId ||

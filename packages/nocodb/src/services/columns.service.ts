@@ -121,6 +121,7 @@ import { MetaDependencyEventHandler } from '~/services/meta-dependency/event-han
 import { getRelatedModelMap } from '~/utils/getRelatedModelMap';
 import { validateColumnInternalMeta } from '~/types/column-internal-meta';
 import { backfillAutoNumber } from '~/helpers/autonumberHelpers';
+import { getModelContext, setModelContext } from '~/helpers/modelContext';
 
 export type { ReusableParams } from '~/services/columns.service.type';
 
@@ -520,7 +521,7 @@ export class ColumnsService implements IColumnsService {
         });
       }
 
-      await table.getColumns(context);
+      await table.getColumns();
 
       const updatedColumn = await Column.get(context, {
         colId: param.columnId,
@@ -558,7 +559,7 @@ export class ColumnsService implements IColumnsService {
 
       Get all the columns in the table and return
       */
-      await table.getColumns(context);
+      await table.getColumns();
 
       const updatedColumn = await Column.get(context, {
         colId: param.columnId,
@@ -956,7 +957,7 @@ export class ColumnsService implements IColumnsService {
               Substitute column alias with id in prompt
             */
             if (colBody.formula_raw) {
-              await table.getColumns(context);
+              await table.getColumns();
 
               colBody.formula = colBody.formula_raw.replace(
                 /{(.*?)}/g,
@@ -1912,7 +1913,7 @@ export class ColumnsService implements IColumnsService {
             });
           }
 
-          await view.getView(context);
+          await view.getView();
           NocoSocket.broadcastEvent(
             context,
             {
@@ -2219,7 +2220,7 @@ export class ColumnsService implements IColumnsService {
           Substitute column alias with id in prompt
         */
         if (colBody.prompt_raw) {
-          await table.getColumns(context);
+          await table.getColumns();
 
           prompt = colBody.prompt_raw.replace(/{(.*?)}/g, (match, p1) => {
             const column = table.columns.find((c) => c.title === p1);
@@ -2410,7 +2411,7 @@ export class ColumnsService implements IColumnsService {
     );
 
     // Get all the columns in the table and return
-    await table.getColumns(context, undefined, defaultView?.id);
+    await table.getColumns(undefined, defaultView?.id);
 
     // Handle filter transformation if this is a column type change
     if (column.uidt !== colBody.uidt) {
@@ -2490,7 +2491,7 @@ export class ColumnsService implements IColumnsService {
   ) {
     const oldColumn = await Column.get(context, { colId: param.columnId });
     const oldPrimaryColumn = await Model.get(context, oldColumn.fk_model_id)
-      .then((model) => model.getColumns(context))
+      .then((model) => model.getColumns())
       .then((columns) => columns.find((c) => c.pv));
     if (!oldColumn) {
       NcError.get(context).fieldNotFound(param.columnId);
@@ -2623,7 +2624,7 @@ export class ColumnsService implements IColumnsService {
     }
 
     const base = await reuseOrSave('base', reuse, async () =>
-      source.getProject(context),
+      source.getProject(),
     );
 
     const columnWebhookManager =
@@ -3017,7 +3018,7 @@ export class ColumnsService implements IColumnsService {
             Substitute column alias with id in prompt
           */
           if (colBody.formula_raw) {
-            await table.getColumns(context);
+            await table.getColumns();
 
             colBody.formula = colBody.formula_raw.replace(
               /{(.*?)}/g,
@@ -3048,7 +3049,7 @@ export class ColumnsService implements IColumnsService {
       case UITypes.LastModifiedBy:
         {
           let columnName: string;
-          const columns = await table.getColumns(context);
+          const columns = await table.getColumns();
           // check if column already exists, then just create a new column in meta
           // else create a new column in meta and db
           const existingColumn = columns.find(
@@ -3391,7 +3392,7 @@ export class ColumnsService implements IColumnsService {
             Substitute column alias with id in prompt
           */
             if (colBody.prompt_raw) {
-              await table.getColumns(context);
+              await table.getColumns();
 
               prompt = colBody.prompt_raw.replace(/{(.*?)}/g, (match, p1) => {
                 const column = table.columns.find((c) => c.title === p1);
@@ -3498,7 +3499,7 @@ export class ColumnsService implements IColumnsService {
       ncMeta,
     );
 
-    await table.getColumns(context, undefined, defaultView?.id);
+    await table.getColumns(undefined, defaultView?.id);
 
     const newColumn = table.columns.find((c) => c.title === param.column.title);
 
@@ -3644,7 +3645,7 @@ export class ColumnsService implements IColumnsService {
 
     // check column association with any custom links or LTAR
     if (!isVirtualCol(column)) {
-      const columns = await table.getColumns(context, ncMeta);
+      const columns = await table.getColumns(ncMeta);
 
       let link = columns.find((c) => {
         return (
@@ -3684,7 +3685,7 @@ export class ColumnsService implements IColumnsService {
           { colId: link.fk_column_id },
           ncMeta,
         );
-        const table = await linkCol.getModel(context, ncMeta);
+        const table = await linkCol.getModel(ncMeta);
         NcError.get(context).columnAssociatedWithLink(column.id, {
           customMessage: `Column is associated with Link column '${
             linkCol.title || linkCol.column_name
@@ -3725,7 +3726,7 @@ export class ColumnsService implements IColumnsService {
         break;
 
       case UITypes.Formula:
-        if (!column.colOptions) await column.getColOptions(context, ncMeta);
+        if (!column.colOptions) await column.getColOptions(ncMeta);
         if (column.colOptions.parsed_tree?.dataType === FormulaDataTypes.DATE) {
           if (
             (
@@ -3784,27 +3785,18 @@ export class ColumnsService implements IColumnsService {
       case UITypes.LinkToAnotherRecord:
         {
           const relationColOpt =
-            await column.getColOptions<LinkToAnotherRecordColumn>(
-              context,
-              ncMeta,
-            );
+            await column.getColOptions<LinkToAnotherRecordColumn>(ncMeta);
 
           const { childContext, parentContext, mmContext } =
-            await relationColOpt.getParentChildContext(context);
-          const childColumn = await relationColOpt.getChildColumn(
-            childContext,
-            ncMeta,
-          );
+            await relationColOpt.getParentChildContext();
+          const childColumn = await relationColOpt.getChildColumn(ncMeta);
           const childTable = childColumn
-            ? await childColumn.getModel(childContext, ncMeta)
+            ? await childColumn.getModel(ncMeta)
             : null;
 
-          const parentColumn = await relationColOpt.getParentColumn(
-            parentContext,
-            ncMeta,
-          );
+          const parentColumn = await relationColOpt.getParentColumn(ncMeta);
           const parentTable = parentColumn
-            ? await parentColumn.getModel(parentContext, ncMeta)
+            ? await parentColumn.getModel(ncMeta)
             : null;
 
           // If child/parent columns or tables are missing (orphaned link),
@@ -3874,16 +3866,11 @@ export class ColumnsService implements IColumnsService {
               break;
             case 'mm':
               {
-                const mmTable = await relationColOpt.getMMModel(
-                  mmContext,
-                  ncMeta,
-                );
+                const mmTable = await relationColOpt.getMMModel(ncMeta);
                 const mmParentCol = await relationColOpt.getMMParentColumn(
-                  mmContext,
                   ncMeta,
                 );
                 const mmChildCol = await relationColOpt.getMMChildColumn(
-                  mmContext,
                   ncMeta,
                 );
 
@@ -3929,25 +3916,19 @@ export class ColumnsService implements IColumnsService {
                   );
                 }
 
-                const { refContext } = relationColOpt.getRelContext(context);
+                const { refContext } = relationColOpt.getRelContext();
 
-                const refTable = await relationColOpt.getRelatedTable(
-                  refContext,
-                  ncMeta,
-                );
+                const refTable = await relationColOpt.getRelatedTable(ncMeta);
 
                 // Delete inverse MM column on the related table (if it still exists)
                 if (refTable) {
                   const columnsInRelatedTable: Column[] =
-                    await refTable.getColumns(refContext, ncMeta);
+                    await refTable.getColumns(ncMeta);
 
                   for (const c of columnsInRelatedTable) {
                     if (!isLinksOrLTAR(c.uidt)) continue;
                     const colOpt =
-                      await c.getColOptions<LinkToAnotherRecordColumn>(
-                        refContext,
-                        ncMeta,
-                      );
+                      await c.getColOptions<LinkToAnotherRecordColumn>(ncMeta);
                     if (
                       isMMOrMMLike(c) &&
                       colOpt.fk_parent_column_id === childColumn.id &&
@@ -3973,7 +3954,7 @@ export class ColumnsService implements IColumnsService {
                           req: param.req,
                           context: refContext,
                           columnId: c.id,
-                          columns: await refTable.getCachedColumns(refContext),
+                          columns: await refTable.getCachedColumns(),
                         });
                       }
                       break;
@@ -4003,18 +3984,17 @@ export class ColumnsService implements IColumnsService {
                   req: param.req,
                   context: tblContext,
                   columnId: column.id,
-                  columns: await table.getCachedColumns(context),
+                  columns: await table.getCachedColumns(),
                 });
 
                 if (!custom) {
                   if (mmTable) {
                     // delete bt columns in m2m table
-                    await mmTable.getColumns(mmContext, ncMeta);
+                    await mmTable.getColumns(ncMeta);
                     for (const c of mmTable.columns) {
                       if (!isLinksOrLTAR(c.uidt)) continue;
                       const colOpt =
                         await c.getColOptions<LinkToAnotherRecordColumn>(
-                          mmContext,
                           ncMeta,
                         );
                       if (colOpt.type === 'bt') {
@@ -4033,14 +4013,11 @@ export class ColumnsService implements IColumnsService {
                   }
 
                   // delete hm columns in parent table
-                  await parentTable.getColumns(parentContext, ncMeta);
+                  await parentTable.getColumns(ncMeta);
                   for (const c of parentTable.columns) {
                     if (!isLinksOrLTAR(c.uidt)) continue;
                     const colOpt =
-                      await c.getColOptions<LinkToAnotherRecordColumn>(
-                        parentContext,
-                        ncMeta,
-                      );
+                      await c.getColOptions<LinkToAnotherRecordColumn>(ncMeta);
                     if (
                       colOpt.fk_related_model_id ===
                       relationColOpt.fk_mm_model_id
@@ -4057,14 +4034,11 @@ export class ColumnsService implements IColumnsService {
                   }
 
                   // delete hm columns in child table
-                  await childTable.getColumns(childContext, ncMeta);
+                  await childTable.getColumns(ncMeta);
                   for (const c of childTable.columns) {
                     if (!isLinksOrLTAR(c.uidt)) continue;
                     const colOpt =
-                      await c.getColOptions<LinkToAnotherRecordColumn>(
-                        childContext,
-                        ncMeta,
-                      );
+                      await c.getColOptions<LinkToAnotherRecordColumn>(ncMeta);
                     if (
                       colOpt.fk_related_model_id ===
                       relationColOpt.fk_mm_model_id
@@ -4083,7 +4057,7 @@ export class ColumnsService implements IColumnsService {
                   // delete m2m table if it is made for mm relation
                   if (mmTable?.mm) {
                     // retrieve columns in m2m table again
-                    await mmTable.getColumns(mmContext, ncMeta);
+                    await mmTable.getColumns(ncMeta);
 
                     // ignore deleting table if it has more than 2 columns
                     // the expected 2 columns would be table1_id & table2_id
@@ -4100,7 +4074,7 @@ export class ColumnsService implements IColumnsService {
                           : source;
                       (mmTable as any).tn = mmTable.table_name;
                       await sqlMgr.sqlOpPlus(mmSource, 'tableDelete', mmTable);
-                      await mmTable.delete(mmContext, ncMeta);
+                      await mmTable.delete(ncMeta);
                     }
                   }
                 }
@@ -4203,7 +4177,7 @@ export class ColumnsService implements IColumnsService {
     );
 
     // Pass defaultViewId so that default view column order and visibility get added to the column meta
-    await table.getColumns(context, ncMeta, defaultView?.id);
+    await table.getColumns(ncMeta, defaultView?.id);
 
     const displayValueColumn = mapDefaultDisplayValue(table.columns);
     if (displayValueColumn) {
@@ -4315,22 +4289,17 @@ export class ColumnsService implements IColumnsService {
       if (!relationColOpt) {
         foreignKeyName = (
           (
-            await childTable
-              .getColumns(childContext, ncMeta)
-              .then(async (cols) => {
-                for (const col of cols) {
-                  if (col.uidt === UITypes.LinkToAnotherRecord) {
-                    const colOptions =
-                      await col.getColOptions<LinkToAnotherRecordColumn>(
-                        childContext,
-                        ncMeta,
-                      );
-                    if (colOptions.fk_related_model_id === parentTable.id) {
-                      return { colOptions };
-                    }
+            await childTable.getColumns(ncMeta).then(async (cols) => {
+              for (const col of cols) {
+                if (col.uidt === UITypes.LinkToAnotherRecord) {
+                  const colOptions =
+                    await col.getColOptions<LinkToAnotherRecordColumn>(ncMeta);
+                  if (colOptions.fk_related_model_id === parentTable.id) {
+                    return { colOptions };
                   }
                 }
-              })
+              }
+            })
           )?.colOptions as LinkToAnotherRecordType
         ).fk_index_name;
       } else {
@@ -4361,23 +4330,17 @@ export class ColumnsService implements IColumnsService {
 
     if (!relationColOpt) return;
 
-    const { refContext } = relationColOpt.getRelContext(context);
+    const { refContext } = relationColOpt.getRelContext();
 
-    const refTable = await relationColOpt.getRelatedTable(refContext, ncMeta);
+    const refTable = await relationColOpt.getRelatedTable(ncMeta);
 
     // Delete inverse column on the related table (if it still exists)
     if (refTable) {
-      const columnsInRelatedTable: Column[] = await refTable.getColumns(
-        refContext,
-        ncMeta,
-      );
+      const columnsInRelatedTable: Column[] = await refTable.getColumns(ncMeta);
       const relType = relationColOpt.type === 'bt' ? 'hm' : 'bt';
       for (const c of columnsInRelatedTable) {
         if (!isLinksOrLTAR(c.uidt)) continue;
-        const colOpt = await c.getColOptions<LinkToAnotherRecordColumn>(
-          refContext,
-          ncMeta,
-        );
+        const colOpt = await c.getColOptions<LinkToAnotherRecordColumn>(ncMeta);
         if (
           colOpt.fk_parent_column_id === parentColumn.id &&
           colOpt.fk_child_column_id === childColumn.id &&
@@ -4409,7 +4372,7 @@ export class ColumnsService implements IColumnsService {
               req,
               context: refContext,
               columnId: colInRefTable.id,
-              columns: await refTable.getColumns(context),
+              columns: await refTable.getColumns(),
             });
           }
 
@@ -4444,7 +4407,7 @@ export class ColumnsService implements IColumnsService {
         req: req,
         context: delContext,
         columnId: col.id,
-        columns: await table.getColumns(delContext),
+        columns: await table.getColumns(),
       });
     }
 
@@ -4576,22 +4539,19 @@ export class ColumnsService implements IColumnsService {
         if (!relationColOpt) {
           foreignKeyName = (
             (
-              await childTable
-                .getColumns(childContext, ncMeta)
-                .then(async (cols) => {
-                  for (const col of cols) {
-                    if (col.uidt === UITypes.LinkToAnotherRecord) {
-                      const colOptions =
-                        await col.getColOptions<LinkToAnotherRecordColumn>(
-                          childContext,
-                          ncMeta,
-                        );
-                      if (colOptions.fk_related_model_id === parentTable.id) {
-                        return { colOptions };
-                      }
+              await childTable.getColumns(ncMeta).then(async (cols) => {
+                for (const col of cols) {
+                  if (col.uidt === UITypes.LinkToAnotherRecord) {
+                    const colOptions =
+                      await col.getColOptions<LinkToAnotherRecordColumn>(
+                        ncMeta,
+                      );
+                    if (colOptions.fk_related_model_id === parentTable.id) {
+                      return { colOptions };
                     }
                   }
-                })
+                }
+              })
             )?.colOptions as LinkToAnotherRecordType
           ).fk_index_name;
         } else {
@@ -4618,24 +4578,19 @@ export class ColumnsService implements IColumnsService {
 
     if (!relationColOpt) return;
 
-    const { refContext } = relationColOpt.getRelContext(context);
+    const { refContext } = relationColOpt.getRelContext();
 
-    const refTable = await relationColOpt.getRelatedTable(refContext, ncMeta);
+    const refTable = await relationColOpt.getRelatedTable(ncMeta);
 
     // Delete inverse column on the related table (if it still exists)
     if (refTable) {
-      const columnsInRelatedTable: Column[] = await refTable.getCachedColumns(
-        refContext,
-      );
+      const columnsInRelatedTable: Column[] = await refTable.getCachedColumns();
 
       const relType = RelationTypes.ONE_TO_ONE;
 
       for (const c of columnsInRelatedTable) {
         if (c.uidt !== UITypes.LinkToAnotherRecord) continue;
-        const colOpt = await c.getColOptions<LinkToAnotherRecordColumn>(
-          refContext,
-          ncMeta,
-        );
+        const colOpt = await c.getColOptions<LinkToAnotherRecordColumn>(ncMeta);
         if (
           colOpt.fk_parent_column_id === parentColumn.id &&
           colOpt.fk_child_column_id === childColumn.id &&
@@ -4668,7 +4623,7 @@ export class ColumnsService implements IColumnsService {
               req,
               context: refContext,
               columnId: colInRefTable.id,
-              columns: await refTable.getColumns(context),
+              columns: await refTable.getColumns(),
             });
           }
           break;
@@ -4702,7 +4657,7 @@ export class ColumnsService implements IColumnsService {
         req: req,
         context: delContext,
         columnId: col.id,
-        columns: await table.getColumns(context),
+        columns: await table.getColumns(),
       });
     }
 
@@ -4908,7 +4863,7 @@ export class ColumnsService implements IColumnsService {
     if (!isMMLike && (ltarReq.type === 'hm' || ltarReq.type === 'bt')) {
       // populate fk column name
       const fkColName = getUniqueColumnName(
-        await refTable.getColumns(refContext),
+        await refTable.getColumns(),
         `${table.table_name}_id`,
       );
 
@@ -5013,7 +4968,7 @@ export class ColumnsService implements IColumnsService {
     } else if (!isMMLike && ltarReq.type === 'oo') {
       // populate fk column name
       const fkColName = getUniqueColumnName(
-        await refTable.getColumns(refContext),
+        await refTable.getColumns(),
         `${table.table_name}_id`,
       );
 
@@ -5211,10 +5166,10 @@ export class ColumnsService implements IColumnsService {
         await sqlMgr.sqlOpPlus(param.source, 'relationCreate', rel2Args);
       }
 
-      const parentCol = (await assocModel.getColumns(context))?.find(
+      const parentCol = (await assocModel.getColumns())?.find(
         (c) => c.column_name === columnName,
       );
-      const childCol = (await assocModel.getColumns(context))?.find(
+      const childCol = (await assocModel.getColumns())?.find(
         (c) => c.column_name === refColumnName,
       );
 
@@ -5315,7 +5270,7 @@ export class ColumnsService implements IColumnsService {
 
       savedColumn = await Column.insert(context, {
         title: getUniqueColumnAliasName(
-          await table.getColumns(context),
+          await table.getColumns(),
           param.column.title ?? defaultTitle,
         ),
 
@@ -5363,7 +5318,7 @@ export class ColumnsService implements IColumnsService {
       const parentRelCol = await Column.insert(refContext, {
         title: getUniqueColumnAliasName(
           [
-            ...(await refTable.getColumns(refContext)),
+            ...(await refTable.getColumns()),
             // if self ref include saved column
             ...(table.id === refTable.id ? [savedColumn] : []),
           ],
@@ -5409,7 +5364,7 @@ export class ColumnsService implements IColumnsService {
         columnId: parentRelCol.id,
         req: param.req,
         context: refContext,
-        columns: await refTable.getCachedColumns(context),
+        columns: await refTable.getCachedColumns(),
       });
 
       this.appHooksService.emit(AppEvents.COLUMN_CREATE, {
@@ -5418,7 +5373,7 @@ export class ColumnsService implements IColumnsService {
         columnId: savedColumn.id,
         req: param.req,
         context,
-        columns: await table.getCachedColumns(context),
+        columns: await table.getCachedColumns(),
       });
 
       // todo: create index for virtual relations as well
@@ -5483,7 +5438,8 @@ export class ColumnsService implements IColumnsService {
   ) {
     // TODO: implement for snowflake (right now create index does not work with identifier quoting in snowflake - bug?)
     if (source.type === 'snowflake') return;
-    const model = await column.getModel(context);
+    if (!getModelContext(column)) setModelContext(column, context);
+    const model = await column.getModel();
     const indexArgs = {
       columns: [column.column_name],
       tn: model.table_name,
@@ -5586,7 +5542,7 @@ export class ColumnsService implements IColumnsService {
       NcError.get(context).sourceNotFound(table.source_id);
     }
 
-    const base = await source.getProject(context);
+    const base = await source.getProject();
 
     if (!base) {
       NcError.get(context).baseNotFound(source.base_id);
@@ -5780,22 +5736,18 @@ export class ColumnsService implements IColumnsService {
       NcError.get(context).badRequest('Invalid column id');
     }
 
-    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>(
-      context,
-    );
+    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>();
 
     let table: Model;
 
-    const { refContext, mmContext } = colOptions.getRelContext(context);
-
     if (colOptions.fk_mm_model_id === tableId) {
-      table = await colOptions.getMMModel(mmContext);
+      table = await colOptions.getMMModel();
       // load columns
-      await table.getColumns(mmContext);
+      await table.getColumns();
     } else if (colOptions.fk_related_model_id === tableId) {
-      table = await colOptions.getRelatedTable(refContext);
+      table = await colOptions.getRelatedTable();
       // load columns
-      await table.getColumns(refContext);
+      await table.getColumns();
     } else {
       NcError.get(context).badRequest('Invalid table id');
     }
@@ -5872,9 +5824,7 @@ export class ColumnsService implements IColumnsService {
       NcError.badRequest('Column is not a Link/LTAR type');
     }
 
-    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>(
-      context,
-    );
+    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>();
 
     // MM — Rollup + LTAR conversion (junction table already exists)
     if (colOptions.type === RelationTypes.MANY_TO_MANY) {
@@ -5916,9 +5866,8 @@ export class ColumnsService implements IColumnsService {
       btColOptions = colOptions;
 
       // Find the paired HM/OO column in the related table
-      const { refContext } = colOptions.getRelContext(context);
-      const relatedTable = await colOptions.getRelatedTable(refContext);
-      const relatedColumns = await relatedTable.getColumns(refContext);
+      const relatedTable = await colOptions.getRelatedTable();
+      const relatedColumns = await relatedTable.getColumns();
 
       const pairedRelType =
         colOptions.type === RelationTypes.ONE_TO_ONE
@@ -5929,9 +5878,7 @@ export class ColumnsService implements IColumnsService {
         if (!isLinksOrLTAR(c.uidt)) continue;
         // Skip self (self-referencing OO: both sides have same type & FK columns)
         if (c.id === column.id) continue;
-        const opts = await c.getColOptions<LinkToAnotherRecordColumn>(
-          refContext,
-        );
+        const opts = await c.getColOptions<LinkToAnotherRecordColumn>();
         if (
           opts.fk_parent_column_id === colOptions.fk_parent_column_id &&
           opts.fk_child_column_id === colOptions.fk_child_column_id &&
@@ -5951,9 +5898,8 @@ export class ColumnsService implements IColumnsService {
       hmColOptions = colOptions;
 
       // Find the paired BT column in the related table
-      const { refContext } = colOptions.getRelContext(context);
-      const relatedTable = await colOptions.getRelatedTable(refContext);
-      const relatedColumns = await relatedTable.getColumns(refContext);
+      const relatedTable = await colOptions.getRelatedTable();
+      const relatedColumns = await relatedTable.getColumns();
 
       const pairedRelType =
         colOptions.type === RelationTypes.ONE_TO_ONE
@@ -5964,9 +5910,7 @@ export class ColumnsService implements IColumnsService {
         if (!isLinksOrLTAR(c.uidt)) continue;
         // Skip self (self-referencing OO: both sides have same type & FK columns)
         if (c.id === column.id) continue;
-        const opts = await c.getColOptions<LinkToAnotherRecordColumn>(
-          refContext,
-        );
+        const opts = await c.getColOptions<LinkToAnotherRecordColumn>();
         if (
           opts.fk_parent_column_id === colOptions.fk_parent_column_id &&
           opts.fk_child_column_id === colOptions.fk_child_column_id &&
@@ -5989,7 +5933,7 @@ export class ColumnsService implements IColumnsService {
     });
     const parentPK = parentTable.primaryKey;
 
-    const { refContext: childRefContext } = hmColOptions.getRelContext(context);
+    const { refContext: childRefContext } = hmColOptions.getRelContext();
     const childTable = await Model.getWithInfo(childRefContext, {
       id: hmColOptions.fk_related_model_id,
     });
@@ -6010,7 +5954,7 @@ export class ColumnsService implements IColumnsService {
         ? source
         : await Source.get(childRefContext, childTable.source_id);
 
-    const base = await source.getProject(context);
+    const base = await source.getProject();
 
     const sqlMgr = await ProjectMgrv2.getSqlMgr(context, {
       id: source.base_id,
@@ -6241,10 +6185,10 @@ export class ColumnsService implements IColumnsService {
       }
 
       // Get junction table columns
-      const parentCol = (await assocModel.getColumns(context))?.find(
+      const parentCol = (await assocModel.getColumns())?.find(
         (c) => c.column_name === columnName,
       );
-      const childCol = (await assocModel.getColumns(context))?.find(
+      const childCol = (await assocModel.getColumns())?.find(
         (c) => c.column_name === refColumnName,
       );
 
@@ -6340,7 +6284,7 @@ export class ColumnsService implements IColumnsService {
         }
 
         newLtarTitle = getUniqueColumnAliasName(
-          await parentTable.getColumns(context),
+          await parentTable.getColumns(),
           `LTAR_${hmColumn.title}`,
         );
       }
@@ -6620,18 +6564,14 @@ export class ColumnsService implements IColumnsService {
         // Update cached fk_relation_column_id for dependent lookup/rollup columns
         // that were retargeted from hmColumn → newLtarCol during the transaction.
         for (const colId of dependentLookupColIds) {
-          await NocoCache.update(
-            context,
-            `${CacheScope.COL_LOOKUP}:${colId}`,
-            { fk_relation_column_id: newLtarCol.id },
-          );
+          await NocoCache.update(context, `${CacheScope.COL_LOOKUP}:${colId}`, {
+            fk_relation_column_id: newLtarCol.id,
+          });
         }
         for (const colId of dependentRollupColIds) {
-          await NocoCache.update(
-            context,
-            `${CacheScope.COL_ROLLUP}:${colId}`,
-            { fk_relation_column_id: newLtarCol.id },
-          );
+          await NocoCache.update(context, `${CacheScope.COL_ROLLUP}:${colId}`, {
+            fk_relation_column_id: newLtarCol.id,
+          });
         }
       }
 
@@ -6664,7 +6604,7 @@ export class ColumnsService implements IColumnsService {
         req: param.req,
         context,
         columnId: hmColumn.id,
-        columns: await parentTable.getColumns(context),
+        columns: await parentTable.getColumns(),
       });
 
       return parentTable;
@@ -6692,7 +6632,7 @@ export class ColumnsService implements IColumnsService {
       // model don't try to touch a table that no longer exists.
       if (assocModel?.id) {
         try {
-          await assocModel.delete(context);
+          await assocModel.delete();
         } catch (_e) {
           this.logger.warn(
             `Failed to clean up junction model meta during rollback: ${_e.message}`,
@@ -6742,16 +6682,16 @@ export class ColumnsService implements IColumnsService {
     });
 
     // Find paired MM column on the related table
-    const { refContext } = colOptions.getRelContext(context);
-    const relatedTable = await colOptions.getRelatedTable(refContext);
-    const relatedColumns = await relatedTable.getColumns(refContext);
+    const { refContext } = colOptions.getRelContext();
+    const relatedTable = await colOptions.getRelatedTable();
+    const relatedColumns = await relatedTable.getColumns();
 
     let pairedColumn: Column | undefined;
 
     for (const c of relatedColumns) {
       if (!isLinksOrLTAR(c.uidt)) continue;
       if (c.id === column.id) continue;
-      const opts = await c.getColOptions<LinkToAnotherRecordColumn>(refContext);
+      const opts = await c.getColOptions<LinkToAnotherRecordColumn>();
       if (
         // Match any junction-table based relation type (MM, OM, MO)
         (opts.type === RelationTypes.MANY_TO_MANY ||
@@ -6793,7 +6733,7 @@ export class ColumnsService implements IColumnsService {
       }
 
       mmNewLtarTitle = getUniqueColumnAliasName(
-        await sourceTable.getColumns(context),
+        await sourceTable.getColumns(),
         `LTAR_${column.title}`,
       );
     }
@@ -7013,7 +6953,7 @@ export class ColumnsService implements IColumnsService {
       req: param.req,
       context,
       columnId: column.id,
-      columns: await sourceTable.getColumns(context),
+      columns: await sourceTable.getColumns(),
     });
 
     return sourceTable;

@@ -68,7 +68,7 @@ export default async function ({ ncMeta }: NcUpgraderCtx) {
     const knex: Knex = source.is_meta
       ? ncMeta.knexConnection
       : await NcConnectionMgrv2.get(source);
-    const models = await source.getModels(context, ncMeta);
+    const models = await source.getModels(ncMeta);
 
     // used in timeout error message
     const timeoutErrorInfo = {
@@ -88,7 +88,7 @@ export default async function ({ ncMeta }: NcUpgraderCtx) {
         // get all attachment & primary key columns
         // and filter out the columns that are missing in database
         const columns = await (await Model.get(context, model.id, ncMeta))
-          .getColumns(context, ncMeta)
+          .getColumns(ncMeta)
           .then(async (columns) => {
             const filteredColumns = [];
 

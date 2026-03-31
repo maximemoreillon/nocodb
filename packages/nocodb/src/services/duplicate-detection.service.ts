@@ -22,7 +22,7 @@ export class DuplicateDetectionService {
     column: Column,
     excludeRowId?: string | number,
   ): Promise<{ hasDuplicates: boolean; count: number }> {
-    const model = await column.getModel(context);
+    const model = await column.getModel();
     const source = await Source.get(context, model.source_id);
     const knex: CustomKnex = await NcConnectionMgrv2.get(source);
 
@@ -145,7 +145,7 @@ export class DuplicateDetectionService {
       return true;
     }
 
-    const model = await column.getModel(context);
+    const model = await column.getModel();
     const source = await Source.get(context, model.source_id);
     const knex: CustomKnex = await NcConnectionMgrv2.get(source);
 
@@ -227,7 +227,7 @@ export class DuplicateDetectionService {
     column: Column,
     limit: number = 10,
   ): Promise<Array<{ value: any; count: number }>> {
-    const model = await column.getModel(context);
+    const model = await column.getModel();
     const source = await Source.get(context, model.source_id);
     const knex: CustomKnex = await NcConnectionMgrv2.get(source);
 

@@ -121,7 +121,7 @@ export class GalleriesService {
       context,
     });
 
-    await view.getView(context);
+    await view.getView();
 
     NocoSocket.broadcastEvent(
       context,
@@ -202,7 +202,7 @@ export class GalleriesService {
       owner,
     });
 
-    await view.getView(context);
+    await view.getView();
 
     NocoSocket.broadcastEvent(
       context,

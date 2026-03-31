@@ -37,8 +37,8 @@ export async function getColumnNameQuery({
   if (column.uidt === UITypes.Barcode || column.uidt === UITypes.QrCode) {
     column = new Column({
       ...(await column
-        .getColOptions<BarcodeColumn | QrCodeColumn>(context)
-        .then((col) => col.getValueColumn(context))),
+        .getColOptions<BarcodeColumn | QrCodeColumn>()
+        .then((col) => col.getValueColumn())),
       id: column.id,
     });
   }
@@ -70,13 +70,13 @@ export async function getColumnNameQuery({
       column_name_query = await genRollupSelectv2({
         baseModelSqlv2,
         knex,
-        columnOptions: (await column.getColOptions(context)) as RollupColumn,
+        columnOptions: (await column.getColOptions()) as RollupColumn,
       });
       break;
     }
 
     case UITypes.Formula: {
-      const formula = await column.getColOptions<FormulaColumn>(context);
+      const formula = await column.getColOptions<FormulaColumn>();
       if (!formula.error) {
         column_name_query =
           await baseModelSqlv2.getSelectQueryBuilderForFormula(column);
@@ -86,7 +86,7 @@ export async function getColumnNameQuery({
 
     case UITypes.LinkToAnotherRecord:
     case UITypes.Lookup: {
-      const model = await column.getModel(context);
+      const model = await column.getModel();
       column_name_query = await generateLookupSelectQuery({
         baseModelSqlv2,
         column: column,

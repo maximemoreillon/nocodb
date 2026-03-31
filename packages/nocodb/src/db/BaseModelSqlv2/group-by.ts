@@ -94,7 +94,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
     args.column_name = args.column_name || '';
     const subGroupColumnName = args.subGroupColumnName;
 
-    const columns = await baseModel.model.getColumns(baseModel.context);
+    const columns = await baseModel.model.getColumns();
     const groupByColumns: Record<string, Column> = {};
 
     const selectors = [];
@@ -116,8 +116,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
       if ([UITypes.QrCode, UITypes.Barcode].includes(column.uidt)) {
         column = new Column({
           ...(await column
-            .getColOptions<BarcodeColumn | QrCodeColumn>(baseModel.context)
-            .then((col) => col.getValueColumn(baseModel.context))),
+            .getColOptions<BarcodeColumn | QrCodeColumn>()
+            .then((col) => col.getValueColumn())),
           asId: column.id,
         });
       }
@@ -146,9 +146,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
             await genRollupSelectv2({
               baseModelSqlv2: baseModel,
               knex: baseModel.dbDriver,
-              columnOptions: (await column.getColOptions(
-                baseModel.context,
-              )) as RollupColumn,
+              columnOptions: (await column.getColOptions()) as RollupColumn,
             })
           ).builder;
           if (!isSubGroup) {
@@ -330,10 +328,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
       await baseModel.shuffle({ qb });
     }
 
-    const aliasColObjMap = await baseModel.model.getAliasColObjMap(
-      baseModel.context,
-      columns,
-    );
+    const aliasColObjMap = await baseModel.model.getAliasColObjMap(columns);
 
     let sorts = extractSortsObject(
       baseModel.context,
@@ -518,7 +513,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
     const groupBySelectors = [];
     const getAlias = getAliasGenerator('__nc_gb');
 
-    const columns = await baseModel.model.getColumns(baseModel.context);
+    const columns = await baseModel.model.getColumns();
 
     // todo: refactor and avoid duplicate code
     await Promise.all(
@@ -534,8 +529,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
         if ([UITypes.QrCode, UITypes.Barcode].includes(column.uidt))
           column = new Column({
             ...(await column
-              .getColOptions<BarcodeColumn | QrCodeColumn>(baseModel.context)
-              .then((col) => col.getValueColumn(baseModel.context))),
+              .getColOptions<BarcodeColumn | QrCodeColumn>()
+              .then((col) => col.getValueColumn())),
             asId: column.id,
           });
 
@@ -561,9 +556,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
                   knex: baseModel.dbDriver,
                   // column,
                   // alias,
-                  columnOptions: (await column.getColOptions(
-                    baseModel.context,
-                  )) as RollupColumn,
+                  columnOptions: (await column.getColOptions()) as RollupColumn,
                 })
               ).builder.as(getAs(column)),
             );
@@ -732,10 +725,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
     qb.count(`${baseModel.model.primaryKey?.column_name || '*'} as count`);
     qb.select(...selectors);
 
-    const aliasColObjMap = await baseModel.model.getAliasColObjMap(
-      baseModel.context,
-      columns,
-    );
+    const aliasColObjMap = await baseModel.model.getAliasColObjMap(columns);
 
     const { filters: filterObj } = extractFilterFromXwhere(
       baseModel.context,
@@ -808,11 +798,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
     _view: View,
   ) => {
     try {
-      const columns = await baseModel.model.getColumns(baseModel.context);
-      const aliasColObjMap = await baseModel.model.getAliasColObjMap(
-        baseModel.context,
-        columns,
-      );
+      const columns = await baseModel.model.getColumns();
+      const aliasColObjMap = await baseModel.model.getAliasColObjMap(columns);
       const selectors = [] as Array<Knex.Raw>;
 
       const viewFilterList = await Filter.rootFilterList(baseModel.context, {
@@ -850,10 +837,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
             if ([UITypes.QrCode, UITypes.Barcode].includes(column.uidt)) {
               column = new Column({
                 ...(await column
-                  .getColOptions<BarcodeColumn | QrCodeColumn>(
-                    baseModel.context,
-                  )
-                  .then((col) => col.getValueColumn(baseModel.context))),
+                  .getColOptions<BarcodeColumn | QrCodeColumn>()
+                  .then((col) => col.getValueColumn())),
                 asId: column.id,
               });
             }
@@ -879,9 +864,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
                     await genRollupSelectv2({
                       baseModelSqlv2: baseModel,
                       knex: baseModel.dbDriver,
-                      columnOptions: (await column.getColOptions(
-                        baseModel.context,
-                      )) as RollupColumn,
+                      columnOptions:
+                        (await column.getColOptions()) as RollupColumn,
                     })
                   ).builder.as(getAs(column)),
                 );
@@ -1144,11 +1128,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
     }[],
     _view: View,
   ) => {
-    const columns = await baseModel.model.getColumns(baseModel.context);
-    const aliasColObjMap = await baseModel.model.getAliasColObjMap(
-      baseModel.context,
-      columns,
-    );
+    const columns = await baseModel.model.getColumns();
+    const aliasColObjMap = await baseModel.model.getAliasColObjMap(columns);
     const selectors = [] as Array<Knex.Raw>;
 
     const viewFilterList = await Filter.rootFilterList(baseModel.context, {
@@ -1204,10 +1185,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
             if ([UITypes.QrCode, UITypes.Barcode].includes(column.uidt)) {
               column = new Column({
                 ...(await column
-                  .getColOptions<BarcodeColumn | QrCodeColumn>(
-                    baseModel.context,
-                  )
-                  .then((col) => col.getValueColumn(baseModel.context))),
+                  .getColOptions<BarcodeColumn | QrCodeColumn>()
+                  .then((col) => col.getValueColumn())),
                 asId: column.id,
               });
             }
@@ -1233,9 +1212,8 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
                     await genRollupSelectv2({
                       baseModelSqlv2: baseModel,
                       knex: baseModel.dbDriver,
-                      columnOptions: (await column.getColOptions(
-                        baseModel.context,
-                      )) as RollupColumn,
+                      columnOptions:
+                        (await column.getColOptions()) as RollupColumn,
                     })
                   ).builder.as(getAs(column)),
                 );
@@ -1580,7 +1558,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
 
       const { where, aggregation } = baseModel._getListArgs(args as any);
 
-      const columns = await baseModel.model.getColumns(baseModel.context);
+      const columns = await baseModel.model.getColumns();
 
       let viewColumns: any[];
       if (baseModel.viewId) {
@@ -1625,10 +1603,7 @@ export const groupBy = (baseModel: IBaseModelSqlV2, logger: Logger) => {
         }
       }
 
-      const aliasColObjMap = await baseModel.model.getAliasColObjMap(
-        baseModel.context,
-        columns,
-      );
+      const aliasColObjMap = await baseModel.model.getAliasColObjMap(columns);
 
       const qb = baseModel.dbDriver(baseModel.tnPath);
 

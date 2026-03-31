@@ -23,6 +23,7 @@ import Noco from '~/Noco';
 import NocoCache from '~/cache/NocoCache';
 import { extractProps } from '~/helpers/extractProps';
 import { NcError } from '~/helpers/catchError';
+import { getModelContext, setModelContext } from '~/helpers/modelContext';
 
 export default class Hook implements HookType {
   id?: string;
@@ -63,6 +64,18 @@ export default class Hook implements HookType {
     }
   }
 
+  get context(): NcContext {
+    const ctx = getModelContext(this);
+    if (ctx) return ctx;
+    if (this.fk_workspace_id && this.base_id) {
+      return {
+        workspace_id: this.fk_workspace_id,
+        base_id: this.base_id,
+      } as NcContext;
+    }
+    throw new Error('Hook instance accessed without context');
+  }
+
   public static async get(
     context: NcContext,
     hookId: string,
@@ -95,12 +108,14 @@ export default class Hook implements HookType {
       }
       await NocoCache.set(context, `${CacheScope.HOOK}:${hookId}`, hook);
     }
-    return hook && new Hook(hook);
+    const instance = hook && new Hook(hook);
+    if (instance) setModelContext(instance, context);
+    return instance;
   }
 
-  public async getFilters(context: NcContext, ncMeta = Noco.ncMeta) {
+  public async getFilters(ncMeta = Noco.ncMeta) {
     return await Filter.rootFilterListByHook(
-      context,
+      this.context,
       { hookId: this.id },
       ncMeta,
     );
@@ -196,7 +211,7 @@ export default class Hook implements HookType {
         });
       }
     }
-    return hooks?.map((h) => new Hook(h));
+    return hooks?.map((h) => setModelContext(new Hook(h), context));
   }
 
   public static async insert(

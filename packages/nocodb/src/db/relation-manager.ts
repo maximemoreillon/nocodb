@@ -97,27 +97,25 @@ export class RelationManager {
       childId: any;
     },
   ) {
-    await baseModel.model.getColumns(baseModel.context);
+    await baseModel.model.getColumns();
     const column = baseModel.model.columnsById[colId];
 
     if (!column || !isLinksOrLTAR(column.uidt))
       NcError.get(baseModel.context).fieldNotFound(colId);
 
-    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>(
-      baseModel.context,
-    );
+    const colOptions = await column.getColOptions<LinkToAnotherRecordColumn>();
 
     const { parentContext, childContext, refContext, mmContext } =
-      await colOptions.getParentChildContext(baseModel.context);
+      await colOptions.getParentChildContext();
 
-    const childColumn = await colOptions.getChildColumn(childContext);
-    const parentColumn = await colOptions.getParentColumn(parentContext);
+    const childColumn = await colOptions.getChildColumn();
+    const parentColumn = await colOptions.getParentColumn();
 
-    const parentTable = await parentColumn.getModel(parentContext);
-    const childTable = await childColumn.getModel(childContext);
+    const parentTable = await parentColumn.getModel();
+    const childTable = await childColumn.getModel();
 
-    await childTable.getColumns(childContext);
-    await parentTable.getColumns(parentContext);
+    await childTable.getColumns();
+    await parentTable.getColumns();
 
     const parentBaseModel = await Model.getBaseModelSQL(parentContext, {
       model: parentTable,
@@ -196,9 +194,9 @@ export class RelationManager {
       mmContext,
     } = this.relationContext;
 
-    const vChildCol = await relationColOptions.getMMChildColumn(mmContext);
-    const vParentCol = await relationColOptions.getMMParentColumn(mmContext);
-    const vTable = await relationColOptions.getMMModel(mmContext);
+    const vChildCol = await relationColOptions.getMMChildColumn();
+    const vParentCol = await relationColOptions.getMMParentColumn();
+    const vTable = await relationColOptions.getMMModel();
 
     const assocBaseModel = await Model.getBaseModelSQL(mmContext, {
       model: vTable,
@@ -270,9 +268,9 @@ export class RelationManager {
       mmContext,
     } = this.relationContext;
 
-    const vChildCol = await colOptions.getMMChildColumn(mmContext);
-    const vParentCol = await colOptions.getMMParentColumn(mmContext);
-    const vTable = await colOptions.getMMModel(mmContext);
+    const vChildCol = await colOptions.getMMChildColumn();
+    const vParentCol = await colOptions.getMMParentColumn();
+    const vTable = await colOptions.getMMModel();
 
     const assocBaseModel = await Model.getBaseModelSQL(mmContext, {
       model: vTable,
@@ -1091,9 +1089,9 @@ export class RelationManager {
     switch (relationType) {
       case RelationTypes.MANY_TO_MANY:
         {
-          const vChildCol = await colOptions.getMMChildColumn(mmContext);
-          const vParentCol = await colOptions.getMMParentColumn(mmContext);
-          const vTable = await colOptions.getMMModel(mmContext);
+          const vChildCol = await colOptions.getMMChildColumn();
+          const vParentCol = await colOptions.getMMParentColumn();
+          const vTable = await colOptions.getMMModel();
           const assocBaseModel = await Model.getBaseModelSQL(mmContext, {
             model: vTable,
             dbDriver: baseModel.dbDriver,
@@ -1324,28 +1322,20 @@ export class RelationManager {
   }
 
   async getAuditUpdateObj(req: any) {
-    const {
-      childTable,
-      parentTable,
-      relationColumn,
-      baseModel,
-    } = this.relationContext;
+    const { childTable, parentTable, relationColumn, baseModel } =
+      this.relationContext;
 
     // Find the paired link column on the related table
-    const pairedCol = await extractCorrespondingLinkColumn(
-      baseModel.context,
-      {
-        ltarColumn: relationColumn,
-        referencedTableColumns:
-          relationColumn.fk_model_id === parentTable.id
-            ? childTable.columns
-            : parentTable.columns,
-      },
-    );
+    const pairedCol = await extractCorrespondingLinkColumn(baseModel.context, {
+      ltarColumn: relationColumn,
+      referencedTableColumns:
+        relationColumn.fk_model_id === parentTable.id
+          ? childTable.columns
+          : parentTable.columns,
+    });
 
     // Determine which link column belongs to which table
-    const isRelColOnParent =
-      relationColumn.fk_model_id === parentTable.id;
+    const isRelColOnParent = relationColumn.fk_model_id === parentTable.id;
     const parentLinkCol = isRelColOnParent
       ? relationColumn
       : pairedCol || relationColumn;

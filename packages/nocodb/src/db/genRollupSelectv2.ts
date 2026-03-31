@@ -60,19 +60,19 @@ export default async function genRollupSelectv2(param: {
       colId: columnOptions.fk_relation_column_id,
     });
   } else {
-    relationColumn = await columnOptions.getRelationColumn(context);
+    relationColumn = await columnOptions.getRelationColumn();
   }
   profiler.log('getRelationColumn done');
 
   const relationColumnOption: LinkToAnotherRecordColumn =
-    (await relationColumn.getColOptions(context)) as LinkToAnotherRecordColumn;
+    (await relationColumn.getColOptions()) as LinkToAnotherRecordColumn;
   const { parentContext, childContext, mmContext, refContext } =
-    await relationColumnOption.getParentChildContext(context);
+    await relationColumnOption.getParentChildContext();
 
   const isMMLike = isMMOrMMLike(relationColumn);
 
   const rollupColumn = columnOptions.getRollupColumn
-    ? await columnOptions.getRollupColumn(refContext)
+    ? await columnOptions.getRollupColumn()
     : await Column.get(refContext, {
         colId: columnOptions.fk_rollup_column_id,
       });
@@ -82,10 +82,10 @@ export default async function genRollupSelectv2(param: {
     NcError.get(context).fieldNotFound(columnOptions.fk_rollup_column_id);
   }
 
-  const childCol = await relationColumnOption.getChildColumn(childContext);
-  const childModel = await childCol?.getModel(childContext);
-  const parentCol = await relationColumnOption.getParentColumn(parentContext);
-  const parentModel = await parentCol?.getModel(parentContext);
+  const childCol = await relationColumnOption.getChildColumn();
+  const childModel = await childCol?.getModel();
+  const parentCol = await relationColumnOption.getParentColumn();
+  const parentModel = await parentCol?.getModel();
   const refTableAlias =
     `__nc_rollup_` + Math.random().toString(36).substring(2, 8);
   profiler.log('get base model');
@@ -113,7 +113,7 @@ export default async function genRollupSelectv2(param: {
     if (rollupColumn.uidt === UITypes.Formula) {
       const formulOption = await rollupColumn.getColOptions<
         FormulaColumn | ButtonColumn
-      >(context);
+      >();
 
       const formulaQb = await formulaQueryBuilderv2({
         baseModel: RelationManager.isRelationReversed(
@@ -146,9 +146,7 @@ export default async function genRollupSelectv2(param: {
         baseModelSqlv2: refBaseModel,
         knex,
         alias: refTableAlias,
-        columnOptions: await rollupColumn.getColOptions<RollupColumn>(
-          refContext,
-        ),
+        columnOptions: await rollupColumn.getColOptions<RollupColumn>(),
         nestedLevel: nestedLevel + 1,
         parentColumns,
       });
@@ -302,11 +300,9 @@ export default async function genRollupSelectv2(param: {
 
     case RelationTypes.MANY_TO_MANY: {
       profiler.log('Relation: ' + relationColumnOption.type);
-      const mmModel = await relationColumnOption.getMMModel(mmContext);
-      const mmChildCol = await relationColumnOption.getMMChildColumn(mmContext);
-      const mmParentCol = await relationColumnOption.getMMParentColumn(
-        mmContext,
-      );
+      const mmModel = await relationColumnOption.getMMModel();
+      const mmChildCol = await relationColumnOption.getMMChildColumn();
+      const mmParentCol = await relationColumnOption.getMMParentColumn();
       const assocBaseModel = await Model.getBaseModelSQL(mmContext, {
         id: mmModel.id,
         dbDriver: knex,

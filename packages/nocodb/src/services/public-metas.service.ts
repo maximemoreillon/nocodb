@@ -54,13 +54,13 @@ export class PublicMetasService {
 
     view.lock_type = ViewLockType.Collaborative;
 
-    await view.getFilters(context);
-    await view.getSorts(context);
+    await view.getFilters();
+    await view.getSorts();
 
-    await view.getViewWithInfo(context);
-    await view.getColumns(context);
-    await view.getModelWithInfo(context);
-    await view.model.getColumns(context);
+    await view.getViewWithInfo();
+    await view.getColumns();
+    await view.getModelWithInfo();
+    await view.model.getColumns();
 
     const source = await Source.get(context, view.model.source_id);
     view.client = source.type;
@@ -179,14 +179,12 @@ export class PublicMetasService {
   ) {
     if (isLinksOrLTAR(col.uidt)) {
       await this.extractLTARRelatedMetas(context, {
-        ltarColOption: await col.getColOptions<LinkToAnotherRecordColumn>(
-          context,
-        ),
+        ltarColOption: await col.getColOptions<LinkToAnotherRecordColumn>(),
         relatedMetas,
       });
     } else if (UITypes.Lookup === col.uidt) {
       await this.extractLookupRelatedMetas(context, {
-        lookupColOption: await col.getColOptions<LookupColumn>(context),
+        lookupColOption: await col.getColOptions<LookupColumn>(),
         relatedMetas,
       });
     }
@@ -202,7 +200,7 @@ export class PublicMetasService {
       relatedMetas: { [key: string]: Model };
     },
   ) {
-    const { refContext, mmContext } = ltarColOption.getRelContext(context);
+    const { refContext, mmContext } = ltarColOption.getRelContext();
 
     relatedMetas[ltarColOption.fk_related_model_id] = await Model.getWithInfo(
       refContext,
@@ -264,9 +262,9 @@ export class PublicMetasService {
     });
 
     const { refContext = context } =
-      (relationCol.colOptions as LinkToAnotherRecordColumn)?.getRelContext?.(
-        context,
-      ) || {};
+      (
+        relationCol.colOptions as LinkToAnotherRecordColumn
+      )?.getRelContext?.() || {};
 
     const lookedUpCol = await Column.get(refContext, {
       colId: lookupColOption.fk_lookup_column_id,

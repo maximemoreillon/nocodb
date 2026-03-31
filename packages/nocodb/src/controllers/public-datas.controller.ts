@@ -242,7 +242,7 @@ export class PublicDatasController {
 
     if (!view) NcError.viewNotFound(sharedViewUuid);
 
-    await view.getColumns(context);
+    await view.getColumns();
 
     const isColumnVisible = view.columns.some(
       (c) => c.fk_column_id === columnId && c.show,

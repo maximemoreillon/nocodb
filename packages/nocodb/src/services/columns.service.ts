@@ -839,13 +839,17 @@ export class ColumnsService implements IColumnsService {
             table,
           );
 
+          const formulaColumns = table.columns.filter(
+            (c) => !c.colOptions?.error,
+          );
+
           colBody.formula = await substituteColumnAliasWithIdInFormula(
             colBody.formula_raw || colBody.formula,
             table.columns,
           );
           colBody.parsed_tree = await validateFormulaAndExtractTreeWithType({
             formula: colBody.formula || colBody.formula_raw,
-            columns: table.columns,
+            columns: formulaColumns,
             column,
             clientOrSqlUi: source.type as any,
             getMeta: async (_, { id }) => {
@@ -888,13 +892,17 @@ export class ColumnsService implements IColumnsService {
               table,
             );
 
+            const buttonFormulaColumns = table.columns.filter(
+              (c) => !c.colOptions?.error,
+            );
+
             colBody.formula = await substituteColumnAliasWithIdInFormula(
               colBody.formula_raw || colBody.formula,
               table.columns,
             );
             colBody.parsed_tree = await validateFormulaAndExtractTreeWithType({
               formula: colBody.formula || colBody.formula_raw,
-              columns: table.columns,
+              columns: buttonFormulaColumns,
               column,
               clientOrSqlUi: source.type as any,
               getMeta: async (_, { id }) => {
@@ -2895,6 +2903,10 @@ export class ColumnsService implements IColumnsService {
             table,
           );
 
+          const formulaColumns = table.columns.filter(
+            (c) => !c.colOptions?.error,
+          );
+
           colBody.formula = await substituteColumnAliasWithIdInFormula(
             colBody.formula_raw || colBody.formula,
             table.columns,
@@ -2907,7 +2919,7 @@ export class ColumnsService implements IColumnsService {
               ...colBody,
               colOptions: colBody,
             },
-            columns: table.columns,
+            columns: formulaColumns,
             clientOrSqlUi: source.type as any,
             getMeta: async (_, { id }) => {
               return relatedModels.get(id);
@@ -2954,13 +2966,17 @@ export class ColumnsService implements IColumnsService {
               table,
             );
 
+            const buttonFormulaColumns = table.columns.filter(
+              (c) => !c.colOptions?.error,
+            );
+
             colBody.formula = await substituteColumnAliasWithIdInFormula(
               colBody.formula_raw || colBody.formula,
               table.columns,
             );
             colBody.parsed_tree = await validateFormulaAndExtractTreeWithType({
               formula: colBody.formula,
-              columns: table.columns,
+              columns: buttonFormulaColumns,
               column: {
                 ...colBody,
                 colOptions: colBody,

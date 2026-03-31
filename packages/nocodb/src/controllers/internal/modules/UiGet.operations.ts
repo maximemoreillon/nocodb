@@ -21,6 +21,7 @@ import { CommentsService } from '~/services/comments.service';
 import { SyncService } from '~/services/sync.service';
 import { ExtensionsService } from '~/services/extensions.service';
 import { BaseIntegrationsService } from '~/services/base-integrations.service';
+import { RecordTrashService } from '~/services/record-trash.service';
 @Injectable()
 export class UiGetOperations
   implements InternalApiModule<InternalGETResponseType>
@@ -41,6 +42,7 @@ export class UiGetOperations
     protected syncService: SyncService,
     protected extensionsService: ExtensionsService,
     protected baseIntegrationsService: BaseIntegrationsService,
+    protected recordTrashService: RecordTrashService,
   ) {}
   operations = [
     'nestedDataList' as const,
@@ -74,6 +76,8 @@ export class UiGetOperations
     'listViewDataCount' as const,
     'baseIntegrationList' as const,
     'integrationLinkedBaseList' as const,
+    'recordTrashList' as const,
+    'recordTrashCount' as const,
   ];
   httpMethod = 'GET' as const;
 
@@ -276,6 +280,16 @@ export class UiGetOperations
         return (await this.baseIntegrationsService.linkedBaseList(context, {
           integrationId: req.query.integrationId as string,
         })) as any;
+      case 'recordTrashList':
+        return await this.recordTrashService.getDeletedRecords(context, {
+          tableId: req.query.tableId as string,
+          query: req.query,
+          req,
+        });
+      case 'recordTrashCount':
+        return await this.recordTrashService.getTrashCount(context, {
+          tableId: req.query.tableId as string,
+        });
     }
   }
 }

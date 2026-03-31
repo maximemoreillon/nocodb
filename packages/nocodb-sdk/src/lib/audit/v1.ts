@@ -54,6 +54,14 @@ enum AuditV1OperationTypes {
 
   DATA_CASCADE_UPDATE = 'DATA_CASCADE_UPDATE',
 
+  // Trash / soft-delete operations
+  DATA_SOFT_DELETE = 'DATA_SOFT_DELETE',
+  DATA_BULK_SOFT_DELETE = 'DATA_BULK_SOFT_DELETE',
+  DATA_RESTORE = 'DATA_RESTORE',
+  DATA_BULK_RESTORE = 'DATA_BULK_RESTORE',
+  DATA_PERMANENT_DELETE = 'DATA_PERMANENT_DELETE',
+  DATA_BULK_PERMANENT_DELETE = 'DATA_BULK_PERMANENT_DELETE',
+
   DATA_LINK = 'DATA_LINK',
   DATA_UNLINK = 'DATA_UNLINK',
 
@@ -375,7 +383,10 @@ export const auditV1OperationsCategory: Record<
 export type BulkAuditV1OperationTypes =
   | AuditV1OperationTypes.DATA_BULK_INSERT
   | AuditV1OperationTypes.DATA_BULK_UPDATE
-  | AuditV1OperationTypes.DATA_BULK_DELETE;
+  | AuditV1OperationTypes.DATA_BULK_DELETE
+  | AuditV1OperationTypes.DATA_BULK_SOFT_DELETE
+  | AuditV1OperationTypes.DATA_BULK_RESTORE
+  | AuditV1OperationTypes.DATA_BULK_PERMANENT_DELETE;
 
 export interface UserSigninPayload {
   provider?: string;
@@ -1438,11 +1449,17 @@ const descriptionTemplates = {
   [AuditV1OperationTypes.USER_SIGNUP]: (audit: AuditV1<UserSignupPayload>) =>
     `User '${audit.user}' signed up`,
   [AuditV1OperationTypes.USER_SIGNIN]: (audit: AuditV1<UserSigninPayload>) =>
-    `User '${audit.user}' signed in${audit.details.provider ? ` via ${audit.details.provider}` : ''}`,
+    `User '${audit.user}' signed in${
+      audit.details.provider ? ` via ${audit.details.provider}` : ''
+    }`,
   [AuditV1OperationTypes.USER_SIGNIN_FAILED]: (
     audit: AuditV1<UserSigninFailedPayload>
   ) =>
-    `Failed sign-in attempt${audit.details.email ? ` for '${audit.details.email}'` : ''}${audit.details.provider ? ` via ${audit.details.provider}` : ''}${audit.details.reason ? ` - ${audit.details.reason}` : ''}`,
+    `Failed sign-in attempt${
+      audit.details.email ? ` for '${audit.details.email}'` : ''
+    }${audit.details.provider ? ` via ${audit.details.provider}` : ''}${
+      audit.details.reason ? ` - ${audit.details.reason}` : ''
+    }`,
   [AuditV1OperationTypes.USER_INVITE]: (audit: AuditV1<UserInvitePayload>) =>
     `User '${audit.user}' invited '${audit.details.user_email}'`,
   [AuditV1OperationTypes.USER_PASSWORD_CHANGE]: (
@@ -1485,6 +1502,14 @@ const descriptionTemplates = {
   [AuditV1OperationTypes.DATA_CASCADE_UPDATE]: (
     _audit: AuditV1<DataCascadeUpdatePayload>
   ) => `Record was rescheduled to avoid overlap with a conflicting record`,
+  [AuditV1OperationTypes.DATA_SOFT_DELETE]: (
+    audit: AuditV1<DataDeletePayload>
+  ) => `Record with ID [${audit.row_id}] has been moved to trash`,
+  [AuditV1OperationTypes.DATA_RESTORE]: (audit: AuditV1<DataDeletePayload>) =>
+    `Record with ID [${audit.row_id}] has been restored from trash`,
+  [AuditV1OperationTypes.DATA_PERMANENT_DELETE]: (
+    audit: AuditV1<DataDeletePayload>
+  ) => `Record with ID [${audit.row_id}] has been permanently deleted`,
 
   /*  [AuditV1OperationTypes.DATA_BULK_INSERT]: (
     audit: AuditV1<DataBulkInsertPayload>
@@ -1701,7 +1726,9 @@ const descriptionTemplates = {
   [AuditV1OperationTypes.DATE_DEPENDENCY_UPDATE]: (
     audit: AuditV1<DateDependencyUpdatePayload>
   ) =>
-    `Date dependency ${audit.details.is_new ? 'created' : 'updated'} for table '${audit.details.table_title}'`,
+    `Date dependency ${
+      audit.details.is_new ? 'created' : 'updated'
+    } for table '${audit.details.table_title}'`,
   [AuditV1OperationTypes.DATE_DEPENDENCY_DELETE]: (
     audit: AuditV1<DateDependencyDeletePayload>
   ) => `Date dependency deleted from table '${audit.details.table_title}'`,

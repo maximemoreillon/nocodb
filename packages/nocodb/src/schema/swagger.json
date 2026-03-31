@@ -22632,7 +22632,8 @@
               "Order",
               "Meta",
               "Colour",
-              "UUID"
+              "UUID",
+              "Deleted"
             ],
             "type": "string"
           },
@@ -26663,6 +26664,7 @@
               "LastModifiedBy",
               "AI",
               "Order",
+              "Deleted",
               "Meta",
               "Colour",
               "UUID"

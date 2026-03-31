@@ -729,6 +729,13 @@ export const TableSystemColumns = (isMetaColSupport = false) => [
     allowNonSystem: false,
     system: true,
   },
+  {
+    column_name: '__nc_deleted',
+    title: '__nc_deleted',
+    uidt: UITypes.Deleted,
+    allowNonSystem: false,
+    system: true,
+  },
   ...(isMetaColSupport
     ? [
         {

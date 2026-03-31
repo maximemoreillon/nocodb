@@ -134,6 +134,11 @@ export const relationDataFetcher = (param: {
           skipViewFilter: true,
           prioritizePvSort: true,
         });
+
+        // Exclude soft-deleted records from HM results so they don't leak through links
+        const hmSoftDeleteFilter = await childBaseModel.getSoftDeleteFilter();
+        if (hmSoftDeleteFilter) qb.where(hmSoftDeleteFilter);
+
         const childQb = baseModel.dbDriver.queryBuilder().from(
           baseModel.dbDriver
             .unionAll(
@@ -309,6 +314,10 @@ export const relationDataFetcher = (param: {
       }
       qb.offset(selectAllRecords ? 0 : +rest?.offset || 0);
 
+      // Exclude soft-deleted records from MM results so they don't leak through links
+      const mmSoftDeleteFilter = await refBaseModel.getSoftDeleteFilter();
+      if (mmSoftDeleteFilter) qb.where(mmSoftDeleteFilter);
+
       const children = await refBaseModel.execAndParse(
         qb,
         await refTable.getColumns(refContext),
@@ -386,6 +395,12 @@ export const relationDataFetcher = (param: {
         )
         .limit(1);
 
+      // Exclude soft-deleted records from MM read results
+      const refSoftDeleteFilter = await refBaseModel.getSoftDeleteFilter();
+      if (refSoftDeleteFilter) {
+        qb.where(refSoftDeleteFilter);
+      }
+
       const hasLimitedAccess = !(await hasTableVisibilityAccess(
         baseModel.context,
         refTable.id,
@@ -453,6 +468,10 @@ export const relationDataFetcher = (param: {
         const childTn = childBaseModel.getTnPath(childTable);
         const parentTn = baseModel.getTnPath(parentTable);
 
+        // Exclude soft-deleted records from HM count results
+        const hmCountSoftDeleteFilter =
+          await childBaseModel.getSoftDeleteFilter();
+
         const children = await childBaseModel.execAndParse(
           childBaseModel.dbDriver.unionAll(
             ids.map((p) => {
@@ -468,6 +487,8 @@ export const relationDataFetcher = (param: {
                     .where(_wherePk(parentTable.primaryKeys, p)),
                 )
                 .first();
+
+              if (hmCountSoftDeleteFilter) query.where(hmCountSoftDeleteFilter);
 
               return childBaseModel.isSqlite
                 ? childBaseModel.dbDriver.select().from(query)
@@ -578,6 +599,10 @@ export const relationDataFetcher = (param: {
           prioritizePvSort: true,
         });
 
+        const hmListSoftDeleteFilter =
+          await childBaseModel.getSoftDeleteFilter();
+        if (hmListSoftDeleteFilter) qb.where(hmListSoftDeleteFilter);
+
         const children = await childBaseModel.execAndParse(
           qb,
           await childTable.getColumns(childBaseModel.context),
@@ -642,6 +667,12 @@ export const relationDataFetcher = (param: {
               .select(parentCol.column_name)
               .where(_wherePk(parentTable.primaryKeys, id)),
           );
+
+        // Exclude soft-deleted records from HM count results
+        const hmCountSoftDeleteFilter =
+          await childBaseModel.getSoftDeleteFilter();
+        if (hmCountSoftDeleteFilter) query.where(hmCountSoftDeleteFilter);
+
         const aliasColObjMap = await childTable.getAliasColObjMap(
           childBaseModel.context,
         );
@@ -774,6 +805,8 @@ export const relationDataFetcher = (param: {
         prioritizePvSort: true,
       });
 
+      const mmListSoftDeleteFilter = await refBaseModel.getSoftDeleteFilter();
+
       const finalQb = refBaseModel.dbDriver.unionAll(
         parentIds.map((id) => {
           const query = qb
@@ -787,6 +820,9 @@ export const relationDataFetcher = (param: {
                 .where(_wherePk(table.primaryKeys, id)),
             )
             .select(baseModel.dbDriver.raw('? as ??', [id, GROUP_COL]));
+
+          if (mmListSoftDeleteFilter) query.where(mmListSoftDeleteFilter);
+
           // get one extra record to check if there are more records in case of v3 api and nested
           query.limit(
             (+rest?.limit || 25) +
@@ -847,6 +883,11 @@ export const relationDataFetcher = (param: {
 
       const rtn = childTn;
 
+      const refBaseModel = await Model.getBaseModelSQL(baseModel.context, {
+        dbDriver: baseModel.dbDriver,
+        model: childTable,
+      });
+
       const qb = baseModel
         .dbDriver(rtn)
         .join(vtn, `${vtn}.${vrcn}`, `${rtn}.${rcn}`)
@@ -854,6 +895,10 @@ export const relationDataFetcher = (param: {
         //   [`${tn}_${vcn}`]: `${vtn}.${vcn}`
         // })
         .count(`${vtn}.${vcn}`, { as: 'count' });
+
+      // Exclude soft-deleted records from MM count results
+      const mmCountSoftDeleteFilter = await refBaseModel.getSoftDeleteFilter();
+      if (mmCountSoftDeleteFilter) qb.where(mmCountSoftDeleteFilter);
 
       // await childBaseModel.selectObject({ qb });
       const children = await baseModel.execAndParse(
@@ -946,6 +991,12 @@ export const relationDataFetcher = (param: {
             // .where(table.primaryKey.cn, id)
             .where(_wherePk(table.primaryKeys, parentId)),
         );
+
+      // Exclude soft-deleted records from MM count results
+      const mmCountSoftDeleteFilter =
+        await childBaseModel.getSoftDeleteFilter();
+      if (mmCountSoftDeleteFilter) qb.where(mmCountSoftDeleteFilter);
+
       const aliasColObjMap = await refTable.getAliasColObjMap(refContext);
       const { filters: filterObj } = extractFilterFromXwhere(
         refContext,
@@ -1062,6 +1113,11 @@ export const relationDataFetcher = (param: {
               ),
           ).orWhereNull(rcn);
         });
+
+      // Exclude soft-deleted records from MM excluded count results
+      const mmExclCountSoftDeleteFilter =
+        await childBaseModel.getSoftDeleteFilter();
+      if (mmExclCountSoftDeleteFilter) qb.where(mmExclCountSoftDeleteFilter);
 
       const aliasColObjMap = await childTable.getAliasColObjMap(
         childBaseModel.context,
@@ -1182,6 +1238,11 @@ export const relationDataFetcher = (param: {
         await this.shuffle({ qb });
       }
 
+      // Exclude soft-deleted records from MM excluded list results
+      const mmExclListSoftDeleteFilter =
+        await refBaseModel.getSoftDeleteFilter();
+      if (mmExclListSoftDeleteFilter) qb.where(mmExclListSoftDeleteFilter);
+
       await refBaseModel.selectObject({
         qb,
         fieldsSet: listArgs?.fieldsSet,
@@ -1284,6 +1345,11 @@ export const relationDataFetcher = (param: {
       if (+rest?.shuffle) {
         await this.shuffle({ qb });
       }
+
+      // Exclude soft-deleted records from HM excluded list results
+      const hmExclListSoftDeleteFilter =
+        await refBaseModel.getSoftDeleteFilter();
+      if (hmExclListSoftDeleteFilter) qb.where(hmExclListSoftDeleteFilter);
 
       const hasLimitedAccess = !(await hasTableVisibilityAccess(
         baseModel.context,
@@ -1391,6 +1457,11 @@ export const relationDataFetcher = (param: {
               .where(_wherePk(table.primaryKeys, pid)),
           ).orWhereNull(cn);
         });
+
+      // Exclude soft-deleted records from HM excluded count results
+      const hmExclCountSoftDeleteFilter =
+        await refBaseModel.getSoftDeleteFilter();
+      if (hmExclCountSoftDeleteFilter) qb.where(hmExclCountSoftDeleteFilter);
 
       const aliasColObjMap = await refTable.getAliasColObjMap(
         refBaseModel.context,
@@ -1536,6 +1607,11 @@ export const relationDataFetcher = (param: {
         prioritizePvSort: true,
       });
 
+      const ooExcludedListSoftDeleteFilter =
+        await refModel.getSoftDeleteFilter();
+      if (ooExcludedListSoftDeleteFilter)
+        qb.where(ooExcludedListSoftDeleteFilter);
+
       applyPaginate(qb, rest);
 
       const proto = await refModel.getProto();
@@ -1627,6 +1703,11 @@ export const relationDataFetcher = (param: {
         qb,
         rowId: cid,
       });
+
+      const btExcludedCountSoftDeleteFilter =
+        await parentBaseModel.getSoftDeleteFilter();
+      if (btExcludedCountSoftDeleteFilter)
+        qb.where(btExcludedCountSoftDeleteFilter);
 
       return (
         await parentBaseModel.execAndParse(qb, null, { raw: true, first: true })
@@ -1720,6 +1801,11 @@ export const relationDataFetcher = (param: {
         qb,
         rowId: cid,
       });
+
+      const ooExcludedCountSoftDeleteFilter =
+        await refBaseModel.getSoftDeleteFilter();
+      if (ooExcludedCountSoftDeleteFilter)
+        qb.where(ooExcludedCountSoftDeleteFilter);
 
       return (
         await refBaseModel.execAndParse(qb, null, { raw: true, first: true })
@@ -1818,6 +1904,11 @@ export const relationDataFetcher = (param: {
         onlySort: true,
         prioritizePvSort: true,
       });
+
+      const btExcludedListSoftDeleteFilter =
+        await parentBaseModel.getSoftDeleteFilter();
+      if (btExcludedListSoftDeleteFilter)
+        qb.where(btExcludedListSoftDeleteFilter);
 
       applyPaginate(qb, rest);
 

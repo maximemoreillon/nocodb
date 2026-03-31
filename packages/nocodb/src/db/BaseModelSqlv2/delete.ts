@@ -378,11 +378,6 @@ export class BaseModelDelete {
               let attachments;
               if (typeof row[c.column_name] === 'string') {
                 attachments = JSON.parse(row[c.column_name]);
-                for (const attachment of attachments) {
-                  if (attachment.id) {
-                    fileReferenceIds.push(attachment.id);
-                  }
-                }
               }
 
               if (Array.isArray(attachments)) {
@@ -791,11 +786,6 @@ export class BaseModelDelete {
               let attachments;
               if (typeof row[c.column_name] === 'string') {
                 attachments = JSON.parse(row[c.column_name]);
-                for (const attachment of attachments) {
-                  if (attachment.id) {
-                    fileReferenceIds.push(attachment.id);
-                  }
-                }
               }
 
               if (Array.isArray(attachments)) {

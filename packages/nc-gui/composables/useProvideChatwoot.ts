@@ -68,7 +68,8 @@ export const useProvideChatwoot = () => {
   })
 
   onMounted(() => {
-    if (isChatWootEnabled.value) loadAggMetaInfo()
+    if (!isChatWootEnabled.value) return console.info('Chatwoot loadAggMetaInfo() disabled')
+    loadAggMetaInfo()
   })
 
   return {

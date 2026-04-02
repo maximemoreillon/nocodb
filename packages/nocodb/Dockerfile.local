@@ -39,6 +39,9 @@ RUN pnpm install --prod --shamefully-hoist \
     && rm -rf ./node_modules/sqlite3/deps \
     && chmod +x /usr/src/appEntry/start.sh
 
+# Overwrite npm-installed nc-lib-gui dist with local build
+RUN cp -r ./docker/nc-gui/. ./node_modules/nc-lib-gui/lib/dist/
+
 ########
 # Runner
 ########

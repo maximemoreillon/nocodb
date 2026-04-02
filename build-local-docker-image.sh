@@ -50,7 +50,7 @@ function package_nocodb() {
 
 function build_image() {
     # build docker
-    docker build . -f Dockerfile.local -t nocodb-local || ERROR="build_image failed"
+    docker build --no-cache . -f Dockerfile.local -t nocodb-local || ERROR="build_image failed"
 }
 
 function log_message() {
